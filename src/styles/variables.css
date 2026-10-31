@@ -1,0 +1,106 @@
+/* ==========================================================================
+   Дизайн-токены AROMA DONNA.
+   Все цвета задаются переменными. Тёмная тема просто переопределяет
+   эти переменные для [data-theme='dark'] — компоненты менять не нужно.
+   ========================================================================== */
+
+:root {
+  /* Типографика */
+  --font-heading: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+
+  /* Светлая тема: молочный, кремовый, пудрово-розовый, золото */
+  --bg: #fffaf7;
+  --bg-alt: #faf0eb;
+  --surface: #ffffff;
+  --surface-2: #fcf5f2;
+  --text: #2b1f22;
+  --text-muted: #6f5f64;
+  --heading: #2a1a1e;
+  --border: #eedfd9;
+  --border-strong: #dcc5bd;
+
+  --primary: #a9525f; /* насыщенный пудрово-розовый для кнопок (контраст с белым ≥ 4.5) */
+  --primary-hover: #934552;
+  --on-primary: #ffffff;
+  --rose: #e8b4b2;
+  --rose-soft: #f6e1de;
+  --blush: #fbecea;
+  --gold: #a8812f;
+  --gold-soft: #f1e3c2;
+
+  --success: #2f7d55;
+  --success-bg: #e6f4ec;
+  --error: #b3363f;
+  --error-bg: #fbe9ea;
+  --warning: #8a6116;
+  --warning-bg: #fbf1dc;
+  --info: #5b5f8f;
+  --info-bg: #eeeef8;
+
+  --hero-gradient: radial-gradient(circle at 80% 20%, #f8d9d6 0%, transparent 45%),
+    radial-gradient(circle at 10% 90%, #f4e6cf 0%, transparent 40%), linear-gradient(135deg, #fff8f4, #fbeee9);
+  --overlay: rgba(43, 31, 34, 0.45);
+
+  /* Тени, скругления, отступы */
+  --shadow-sm: 0 1px 2px rgba(80, 40, 45, 0.06), 0 2px 8px rgba(80, 40, 45, 0.05);
+  --shadow-md: 0 8px 24px rgba(120, 60, 70, 0.1);
+  --shadow-lg: 0 18px 48px rgba(120, 60, 70, 0.16);
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+  --container: 1240px;
+  --header-h: 64px;
+  --header-total: 150px; /* полная высота «липкой» шапки на компьютере (промо + 2 ряда) */
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  color-scheme: light;
+}
+
+@media (max-width: 1099px) {
+  :root {
+    --header-total: 98px;
+  }
+}
+
+[data-theme='dark'] {
+  /* Тёмная тема: тёплый графит, приглушённая роза, мягкое золото */
+  --bg: #1a1416;
+  --bg-alt: #211a1d;
+  --surface: #261e21;
+  --surface-2: #2d2428;
+  --text: #f1e6e3;
+  --text-muted: #b9a7ab;
+  --heading: #fbf1ee;
+  --border: #3a2e32;
+  --border-strong: #4d3e43;
+
+  --primary: #e7a6ae;
+  --primary-hover: #f1bcc2;
+  --on-primary: #2a171b;
+  --rose: #c98c93;
+  --rose-soft: #3a2a2f;
+  --blush: #2c2125;
+  --gold: #d9b871;
+  --gold-soft: #3a3121;
+
+  --success: #7fd0a2;
+  --success-bg: #1e3329;
+  --error: #f19aa1;
+  --error-bg: #3b2226;
+  --warning: #e9c27a;
+  --warning-bg: #372c1b;
+  --info: #b3b6ea;
+  --info-bg: #282a40;
+
+  --hero-gradient: radial-gradient(circle at 80% 20%, #3f2a30 0%, transparent 45%),
+    radial-gradient(circle at 10% 90%, #33291c 0%, transparent 40%), linear-gradient(135deg, #1d1618, #241b1e);
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
+}

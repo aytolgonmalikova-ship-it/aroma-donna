@@ -1,0 +1,703 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong. Please try again.",
+    "retry": "Retry",
+    "close": "Close",
+    "viewAll": "View all",
+    "breadcrumbs": "Breadcrumbs",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "main": "Main menu",
+    "menu": "Menu",
+    "openMenu": "Open menu",
+    "home": "Home",
+    "catalog": "Catalog",
+    "quiz": "Scent finder",
+    "about": "About us",
+    "delivery": "Delivery & payment",
+    "contacts": "Contacts",
+    "faq": "FAQ",
+    "reviews": "Reviews",
+    "favorites": "Favorites",
+    "account": "My account",
+    "login": "Sign in",
+    "cart": "Cart"
+  },
+  "header": {
+    "promo": "Free delivery in Bishkek from 7,000 KGS · Gift wrapping with every order"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "theme": {
+    "label": "Theme",
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
+  },
+  "search": {
+    "label": "Search by name or brand",
+    "placeholder": "Find a scent or brand",
+    "noResults": "Nothing found",
+    "showAll": "Show all results"
+  },
+  "footer": {
+    "about": "Premium fragrances for her and for him. We help you find a scent that tells your story.",
+    "shop": "Shop",
+    "customers": "Customers",
+    "contacts": "Contacts",
+    "writeUs": "Write to us",
+    "rights": "All rights reserved.",
+    "demo": "Student project: brands, products, ratings, stock and contacts are demo data. Real orders and payments are not accepted."
+  },
+  "hero": {
+    "eyebrow": "New collection · Autumn 2026",
+    "titleStart": "A fragrance that",
+    "titleAccent": "speaks for you",
+    "text": "Exquisite perfumes and eaux de toilette for women and men. Browse the catalog or take a short scent quiz.",
+    "ctaCatalog": "Go to catalog",
+    "ctaQuiz": "Find my scent",
+    "statScents": "fragrances",
+    "statBrands": "perfume houses",
+    "statLanguages": "interface languages"
+  },
+  "benefits": {
+    "title": "Why AROMA DONNA",
+    "selection": {
+      "title": "Careful curation",
+      "text": "Every fragrance is described by notes, family and intensity."
+    },
+    "delivery": {
+      "title": "Fast delivery",
+      "text": "Courier in Bishkek and shipping to all regions of Kyrgyzstan."
+    },
+    "packaging": {
+      "title": "Gift wrapping",
+      "text": "We wrap your order beautifully and add a card on request."
+    },
+    "payment": {
+      "title": "Pay on delivery",
+      "text": "Cash or card to the courier — no prepayment."
+    }
+  },
+  "home": {
+    "metaTitle": "Premium perfumery",
+    "featuredEyebrow": "Customers' choice",
+    "featuredTitle": "Popular fragrances",
+    "newEyebrow": "Just arrived",
+    "newTitle": "New arrivals",
+    "collectionsEyebrow": "Collections",
+    "collectionsTitle": "Fragrance families",
+    "quizEyebrow": "Not sure what to choose?",
+    "quizTitle": "Find your scent in 1 minute",
+    "quizText": "Answer 5 simple questions and we'll show the fragrances from our catalog that best match your preferences.",
+    "quizCta": "Take the quiz"
+  },
+  "categories": {
+    "women": "Women",
+    "men": "Men",
+    "unisex": "Unisex"
+  },
+  "families": {
+    "floral": "Floral",
+    "fruity": "Fruity",
+    "oriental": "Oriental",
+    "woody": "Woody",
+    "citrus": "Citrus",
+    "gourmand": "Gourmand",
+    "aquatic": "Fresh aquatic",
+    "aromatic": "Aromatic (herbal)"
+  },
+  "familyDescriptions": {
+    "floral": "Rose, jasmine, peony — tenderness and femininity",
+    "fruity": "Juicy berries and fruit — light and playful",
+    "oriental": "Amber, oud, spices — warmth and depth",
+    "woody": "Cedar, sandalwood, vetiver — noble and calm",
+    "citrus": "Lemon, bergamot, neroli — freshness and energy",
+    "gourmand": "Vanilla, caramel, coffee — cosy and sweet",
+    "aquatic": "Sea salt, mint — clean and cool",
+    "aromatic": "Lavender, herbs, fig — natural freshness"
+  },
+  "concentration": {
+    "edt": "Eau de Toilette (EDT)",
+    "edp": "Eau de Parfum (EDP)",
+    "parfum": "Parfum"
+  },
+  "intensity": {
+    "light": "Light",
+    "moderate": "Moderate",
+    "intense": "Intense"
+  },
+  "availability": {
+    "inStock": "In stock",
+    "lowStock": "Low stock",
+    "outOfStock": "Out of stock"
+  },
+  "notes": {
+    "title": "Fragrance pyramid",
+    "levels": {
+      "top": "Top notes",
+      "heart": "Heart notes",
+      "base": "Base notes"
+    },
+    "items": {
+      "pinkPepper": "Pink pepper",
+      "bergamot": "Bergamot",
+      "rose": "Rose",
+      "peony": "Peony",
+      "musk": "Musk",
+      "iris": "Iris",
+      "neroli": "Neroli",
+      "jasmine": "Jasmine",
+      "tuberose": "Tuberose",
+      "amber": "Amber",
+      "vanilla": "Vanilla",
+      "apple": "Apple",
+      "lemon": "Lemon",
+      "lily": "Lily",
+      "pear": "Pear",
+      "caramel": "Caramel",
+      "tonka": "Tonka bean",
+      "sandalwood": "Sandalwood",
+      "raspberry": "Raspberry",
+      "blackcurrant": "Blackcurrant",
+      "cardamom": "Cardamom",
+      "orange": "Orange",
+      "patchouli": "Patchouli",
+      "oud": "Oud",
+      "leather": "Leather",
+      "cedar": "Cedar",
+      "vetiver": "Vetiver",
+      "fig": "Fig",
+      "mint": "Mint",
+      "seaSalt": "Sea salt",
+      "lavender": "Lavender",
+      "coffee": "Coffee",
+      "coconut": "Coconut",
+      "tobacco": "Tobacco"
+    }
+  },
+  "catalog": {
+    "title": "Fragrance catalog",
+    "subtitle": "Search by name and brand, filter by family, price and concentration.",
+    "results": "Catalog results",
+    "found_one": "{{count}} fragrance found",
+    "found_other": "{{count}} fragrances found",
+    "searchFor": "Search",
+    "clearSearch": "Clear search",
+    "notFoundTitle": "No fragrances found",
+    "notFoundText": "Try a different query or reset the filters.",
+    "loadError": "Could not load the catalog."
+  },
+  "filters": {
+    "title": "Filters",
+    "category": "Category",
+    "brand": "Brand",
+    "family": "Fragrance family",
+    "concentration": "Concentration",
+    "price": "Price, KGS",
+    "priceFrom": "from",
+    "priceTo": "to",
+    "priceError": "Minimum price cannot be greater than maximum.",
+    "apply": "Apply",
+    "inStockOnly": "In stock only",
+    "reset": "Reset filters",
+    "show": "Show products"
+  },
+  "sort": {
+    "label": "Sort by",
+    "popular": "Popularity",
+    "rating": "Rating",
+    "priceAsc": "Price: low to high",
+    "priceDesc": "Price: high to low",
+    "nameAsc": "Name (A–Z)",
+    "new": "Newest first"
+  },
+  "product": {
+    "from": "from",
+    "ml": "ml",
+    "new": "New",
+    "bestseller": "Bestseller",
+    "addToCart": "Add to cart",
+    "volume": "Volume",
+    "concentration": "Concentration",
+    "family": "Family",
+    "category": "Category",
+    "intensity": "Intensity",
+    "availability": "Availability",
+    "related": "Similar fragrances",
+    "gallery": "Product photos",
+    "photo": "Photo",
+    "ratingLabel": "Rating {{value}} out of 5",
+    "demoRating": "demo rating",
+    "perkDelivery": "Delivery in Bishkek — 1–2 days",
+    "perkGift": "Free gift wrapping",
+    "perkPayment": "Pay on delivery, no prepayment",
+    "notFoundTitle": "Product not found",
+    "notFoundText": "The link may be outdated. Browse other fragrances in the catalog."
+  },
+  "favorites": {
+    "title": "Favorites",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "removeShort": "Remove",
+    "inFavorites": "In favorites",
+    "emptyTitle": "No favorites yet",
+    "emptyText": "Tap the heart on fragrances you like — they will appear here.",
+    "clear": "Clear favorites",
+    "count_one": "{{count}} fragrance",
+    "count_other": "{{count}} fragrances"
+  },
+  "cart": {
+    "title": "Cart",
+    "items": "Items in cart",
+    "quantity": "Quantity",
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "remove": "Remove from cart",
+    "perItem": "each",
+    "summary": "Your order",
+    "itemsCount_one": "{{count}} item",
+    "itemsCount_other": "{{count}} items",
+    "discount": "Discount",
+    "delivery": "Delivery",
+    "deliveryAtCheckout": "at checkout",
+    "free": "Free",
+    "total": "Total",
+    "checkout": "Checkout",
+    "continue": "Continue shopping",
+    "clear": "Clear cart",
+    "clearConfirm": "Remove all items from the cart?",
+    "emptyTitle": "Your cart is empty",
+    "emptyText": "Add fragrances from the catalog — the cart is kept even after a page refresh.",
+    "goToCatalog": "Go to catalog",
+    "paymentNote": "Pay in cash to the courier or by bank card in DEMO mode — no money is charged."
+  },
+  "promo": {
+    "label": "Promo code",
+    "placeholder": "Promo code",
+    "apply": "Apply",
+    "applied": "Promo code applied",
+    "remove": "Remove",
+    "removed": "Promo code removed",
+    "success": "Promo code {{code}} applied",
+    "errorEmpty": "Enter a promo code.",
+    "errorInvalid": "This promo code doesn't exist. Check the spelling.",
+    "errorAlreadyApplied": "This promo code is already applied to the cart.",
+    "errorUsed": "This promo code has already been used in one of your orders.",
+    "errorMinTotal": "This promo code works for orders from {{min}}.",
+    "notActive": "Promo code {{code}} is inactive: order total is below the minimum",
+    "demoHint": "Demo codes: AROMA10 (−10%), DONNA500 (−500 KGS from 5,000), WELCOME15 (−15% from 3,000, single use). Not a real promotion."
+  },
+  "checkout": {
+    "title": "Checkout",
+    "contacts": "Contact details",
+    "delivery": "Delivery",
+    "payment": "Payment",
+    "paymentMethods": {
+      "cashOnDelivery": "Cash to the courier",
+      "cardOnDelivery": "Card to the courier on delivery",
+      "cardDemo": "Bank card (DEMO)"
+    },
+    "noOnlinePayment": "Online payment is not connected. Bank card details are never requested or stored on this site.",
+    "agree": "I agree to the processing of the data provided to place the order",
+    "placeOrder": "Confirm order",
+    "editCart": "Edit order items",
+    "emptyTitle": "Nothing to check out",
+    "emptyText": "Your cart is empty. Add fragrances from the catalog.",
+    "demoNotice": "Demo mode: the order is saved only in this browser. It is not sent to a store, no money is charged and nothing will be delivered.",
+    "firebaseNotice": "The order will be saved to your account (Firebase). No online payment is made — this is a student project.",
+    "guestNote": "You are checking out as a guest. To see the order in your account,",
+    "submitError": "Could not save the order. Check your connection and try again.",
+    "cashNote": "Pay in cash when you receive the order. The order will get the “Awaiting payment” status.",
+    "cardDemoNote": "Demo payment: after you fill in your details a bank card window will open. No money is charged; card details are never stored or sent anywhere.",
+    "demoPay": "Demo payment",
+    "cancel": "Cancel"
+  },
+  "delivery": {
+    "title": "Delivery & payment",
+    "subtitle": "Delivery terms for Bishkek and the regions of Kyrgyzstan.",
+    "methodsTitle": "Delivery methods",
+    "methods": {
+      "courier": {
+        "title": "Courier in Bishkek",
+        "short": "1–2 business days",
+        "text": "We deliver at a convenient time within 1–2 business days. The courier calls in advance."
+      },
+      "pickup": {
+        "title": "Store pickup",
+        "short": "Boutique in Bishkek",
+        "text": "Pick up your order at the boutique on the same day. You can try fragrances on site."
+      },
+      "regions": {
+        "title": "Regions of Kyrgyzstan",
+        "short": "3–5 business days",
+        "text": "We ship by delivery service to Osh, Karakol, Jalal-Abad and other cities."
+      }
+    },
+    "freeFrom": "free from {{amount}}",
+    "pickupAddress": "Pickup address: Bishkek, AROMA DONNA boutique (demo address), daily 10:00–20:00.",
+    "paymentTitle": "Payment methods",
+    "cashText": "Pay in cash to the courier or at the boutique on receipt.",
+    "cardText": "The courier and boutique accept bank cards via a terminal on receipt.",
+    "noOnline": "Online payment is not connected: this is a demo student project, no money is charged.",
+    "returnTitle": "Exchange & returns",
+    "returnText": "An unopened bottle in original packaging can be returned within 14 days. These terms are for demonstration only and are not a public offer."
+  },
+  "cities": {
+    "bishkek": "Bishkek",
+    "osh": "Osh",
+    "karakol": "Karakol",
+    "jalalabad": "Jalal-Abad",
+    "tokmok": "Tokmok",
+    "naryn": "Naryn",
+    "talas": "Talas",
+    "cholponata": "Cholpon-Ata",
+    "batken": "Batken"
+  },
+  "form": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "password": "Password",
+    "confirmPassword": "Repeat password",
+    "passwordHint": "At least 6 characters",
+    "show": "Show",
+    "hide": "Hide",
+    "city": "City",
+    "address": "Delivery address",
+    "addressPlaceholder": "Street, building, apartment",
+    "comment": "Order comment",
+    "agree": "I agree to the store rules and data processing",
+    "lastName": "Last name",
+    "region": "Region"
+  },
+  "validation": {
+    "required": "Please fill in this field.",
+    "email": "Enter a valid email address, e.g. name@mail.com.",
+    "phone": "Enter a number like +996 700 123 456 or 0700 123 456.",
+    "passwordMin": "Password must be at least 6 characters.",
+    "passwordMatch": "Passwords do not match.",
+    "nameMin": "Name must be at least 2 characters.",
+    "addressMin": "Please give a more detailed address.",
+    "messageMin": "Message must be at least 10 characters.",
+    "tooLong": "The text is too long.",
+    "rating": "Choose a rating from 1 to 5 stars.",
+    "agree": "Your consent is required.",
+    "lastNameMin": "Last name must be at least 2 characters.",
+    "cardHolder": "Enter the cardholder name using letters only.",
+    "cardNumber": "The card number must contain 16 digits.",
+    "cardExpiry": "Enter the expiry date as MM/YY.",
+    "cardExpired": "The card has expired.",
+    "cardCvv": "CVV must contain 3 digits."
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Sign in to see your order history.",
+    "registerTitle": "Create account",
+    "registerSubtitle": "Create an account to keep orders in your profile.",
+    "loginButton": "Sign in",
+    "registerButton": "Create account",
+    "noAccount": "No account?",
+    "registerLink": "Register",
+    "haveAccount": "Already have an account?",
+    "loginLink": "sign in",
+    "demoTitle": "Demo mode.",
+    "demoLogin": "Firebase is not connected: you sign in with the email of a demo user registered in this browser; the password is neither checked nor stored. This is not real account protection.",
+    "demoRegister": "Firebase is not connected: only your name and email are stored in this browser. The password is neither stored nor checked — this demonstrates the interface, not real registration.",
+    "emailInUse": "A user with this email is already registered.",
+    "invalidCredentials": "Incorrect email or password.",
+    "demoUserNotFound": "No demo user with this email in this browser. Please register first.",
+    "tooManyRequests": "Too many attempts. Try again later.",
+    "network": "No connection to the server. Check your internet.",
+    "unknown": "The action failed. Please try again."
+  },
+  "account": {
+    "title": "My account",
+    "greeting": "Hello, {{name}}!",
+    "memberSince": "Registered",
+    "mode": "Mode",
+    "demoMode": "Demo (localStorage)",
+    "statOrders": "orders",
+    "statFavorites": "favorites",
+    "statCart": "in cart",
+    "logout": "Sign out",
+    "orders": "Order history",
+    "noOrders": "No orders yet",
+    "noOrdersText": "Your placed orders will appear here.",
+    "ordersError": "Could not load orders.",
+    "demoOrdersNote": "In demo mode orders are stored only in this browser and are not sent to a store."
+  },
+  "orderStatus": {
+    "demo": "Demo order",
+    "new": "New"
+  },
+  "success": {
+    "title": "Order placed",
+    "titleDemo": "Demo order placed",
+    "number": "Order number",
+    "demoText": "This is a demo order: it is saved only in your browser, not sent to a store, no payment was made and nothing will be delivered.",
+    "firebaseText": "The order is saved to your account. No online payment was made — this is a student project.",
+    "recipient": "Recipient",
+    "continue": "Continue shopping",
+    "toAccount": "Go to my account",
+    "notFound": "Order not found"
+  },
+  "quiz": {
+    "title": "Scent finder",
+    "subtitle": "5 questions — and we'll show the fragrances from our catalog that suit you.",
+    "step": "Step {{current}} of {{total}}",
+    "back": "Back",
+    "next": "Next",
+    "showResults": "Show results",
+    "errorSingle": "Choose one of the options to continue.",
+    "errorMultiple": "Choose at least {{min}} option to continue.",
+    "questions": {
+      "category": {
+        "title": "Who is the fragrance for?",
+        "hint": "Choose a perfume category"
+      },
+      "family": {
+        "title": "Which fragrance family do you prefer?",
+        "hint": "Choose one family"
+      },
+      "notes": {
+        "title": "Your favorite notes",
+        "hint": "Choose 1 to 3 notes"
+      },
+      "intensity": {
+        "title": "How strong should it be?",
+        "hint": "Choose the intensity"
+      },
+      "budget": {
+        "title": "Your budget",
+        "hint": "Price of the smallest bottle"
+      }
+    },
+    "options": {
+      "intensity": {
+        "light": "Subtle, for office and daytime",
+        "moderate": "Noticeable but delicate",
+        "intense": "A bold evening trail"
+      },
+      "budget": {
+        "economy": "Up to 5,000 KGS",
+        "medium": "5,000 – 8,000 KGS",
+        "premium": "From 8,000 KGS",
+        "any": "Doesn't matter"
+      },
+      "budgetHint": {
+        "economy": "Affordable scents",
+        "medium": "Best value",
+        "premium": "Niche and parfum",
+        "any": "Show all options"
+      }
+    },
+    "resultsEyebrow": "Your result",
+    "resultsTitle": "Our picks for you",
+    "yourChoice": "Your choice",
+    "rulesNotice": "Recommendations follow fixed rules (points for matching family, notes, intensity, category and budget), not artificial intelligence.",
+    "match": "{{percent}}% match",
+    "reasons": {
+      "family": "Matches the fragrance family",
+      "notes": "Contains your favorite notes",
+      "intensity": "Suitable intensity",
+      "category": "Fits the category",
+      "budget": "Within your budget"
+    },
+    "viewProduct": "View fragrance",
+    "alsoLike": "You may also like",
+    "restart": "Start over"
+  },
+  "about": {
+    "title": "About us",
+    "subtitle": "AROMA DONNA is a place where fragrance becomes part of your style.",
+    "storyTitle": "Our story",
+    "story1": "AROMA DONNA is conceived as a premium perfume boutique in Bishkek: a place to choose a fragrance calmly, learn about its notes and get honest advice.",
+    "story2": "We gathered scents from six perfume houses — from light citrus to deep oriental compositions — and described each one so that choosing is easy even online.",
+    "values": {
+      "quality": {
+        "title": "Quality",
+        "text": "A detailed description of every fragrance: notes, concentration, intensity."
+      },
+      "care": {
+        "title": "Care",
+        "text": "Scent selection, gift wrapping and delivery at a convenient time."
+      },
+      "style": {
+        "title": "Style",
+        "text": "Elegant service and attention to detail at every step."
+      }
+    },
+    "demo": "This is a student project. Brands and products are fictional; ratings and stock are demo data."
+  },
+  "contacts": {
+    "title": "Contacts",
+    "subtitle": "Have a question about a fragrance or an order? Write to us.",
+    "infoTitle": "How to reach us",
+    "address": "Address",
+    "addressValue": "Bishkek city, Mall БУМ, 1 floor, AROMA DONNA boutique",
+    "hours": "Opening hours",
+    "hoursValue": "Daily 10:00–20:00",
+    "phone": "Phone",
+    "phoneValue": "+996 504889991",
+    "email": "Email",
+    "emailValue": "aytolgonmalikov@gmail.com",
+    "infoDemo": "These contacts are for demonstration and do not belong to a real store.",
+    "formTitle": "Contact form",
+    "topic": "Topic",
+    "topics": {
+      "question": "Question about a fragrance",
+      "order": "Question about an order",
+      "consultation": "Scent consultation",
+      "other": "Other"
+    },
+    "message": "Message",
+    "send": "Send",
+    "thanks": "Thank you for your message!",
+    "sendAnother": "Write another",
+    "sending": "Sending…",
+    "successText": "We have received your message and will reply to the email you provided.",
+    "sentToast": "Message sent",
+    "privacyNote": "Your data is used only to reply to this message.",
+    "hp": "Leave this field empty",
+    "errors": {
+      "validation": "Please check the fields and try again.",
+      "rate_limited": "Too many messages in a row. Please wait a few minutes and try again.",
+      "network": "Cannot reach the server. Check your internet connection and try again.",
+      "not_configured": "Sending messages is unavailable right now. Please contact us by phone or email.",
+      "failed": "The message could not be sent. Please try again a little later.",
+      "partial": "The message was only partly delivered. Press “Send” again — only the undelivered part will be resent."
+    }
+  },
+  "faq": {
+    "title": "FAQ",
+    "subtitle": "Answers to the most common customer questions.",
+    "more": "Didn't find an answer?",
+    "contactUs": "Write to us",
+    "items": {
+      "original": {
+        "q": "Is this a real store?",
+        "a": "No, AROMA DONNA is a student project. Brands and products are fictional; real orders and payments are not accepted."
+      },
+      "choose": {
+        "q": "How do I choose a fragrance online?",
+        "a": "Look at the fragrance family and notes on the product page, or take the Scent finder quiz — it will show suitable options."
+      },
+      "concentration": {
+        "q": "What is the difference between EDT, EDP and Parfum?",
+        "a": "It is the concentration of aromatic oils: Eau de Toilette is the lightest, Eau de Parfum lasts longer, and Parfum is the richest and most long-lasting."
+      },
+      "delivery": {
+        "q": "How much is delivery?",
+        "a": "Courier in Bishkek — 300 KGS (free from 7,000 KGS), regions — 450 KGS (free from 12,000 KGS), pickup — free."
+      },
+      "payment": {
+        "q": "Can I pay online?",
+        "a": "No. No payments are processed on the site: only payment on delivery in cash or by card."
+      },
+      "promo": {
+        "q": "How do I apply a promo code?",
+        "a": "Enter the code in the cart and press Apply. Demo codes: AROMA10, DONNA500, WELCOME15. These are not real promotions."
+      },
+      "return": {
+        "q": "Can I return a fragrance?",
+        "a": "The demo terms state that an unopened bottle can be returned within 14 days."
+      },
+      "account": {
+        "q": "Why register?",
+        "a": "Your account keeps your order history. Without Firebase, registration works in demo mode and stores data only in your browser."
+      },
+      "quiz": {
+        "q": "Does the scent quiz use artificial intelligence?",
+        "a": "No. It uses clear rules: points are given for matching family, notes, intensity, category and budget."
+      },
+      "storage": {
+        "q": "Will my cart be kept after I close the site?",
+        "a": "Yes. Cart, favorites, language and theme are saved in your browser's localStorage."
+      }
+    }
+  },
+  "notify": {
+    "addedToCart": "“{{name}}”, {{volume}} ml — added to cart",
+    "removedFromCart": "“{{name}}” removed from cart",
+    "cartCleared": "Cart cleared",
+    "addedToFavorites": "“{{name}}” added to favorites",
+    "removedFromFavorites": "“{{name}}” removed from favorites",
+    "favoritesCleared": "Favorites cleared",
+    "outOfStock": "“{{name}}” is currently out of stock",
+    "loggedIn": "Welcome, {{name}}!",
+    "registered": "Account created. Welcome, {{name}}!",
+    "loggedOut": "You have signed out",
+    "orderPlaced": "Order {{id}} placed"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "Looks like this scent has faded away. Check the address or go back home."
+  },
+  "reviews": {
+    "title": "Customer reviews",
+    "subtitle": "Honest impressions from our customers about fragrances and service.",
+    "eyebrow": "Your opinion",
+    "all": "All reviews",
+    "invite": "There are no reviews yet. Share your impression of a fragrance or purchase — yours will be the first.",
+    "write": "Write a review",
+    "formTitle": "Write a review",
+    "name": "Your name",
+    "nameHint": "Your name will be published with the review.",
+    "rating": "Rating",
+    "text": "Review",
+    "textHint": "{{count}} / {{max}} characters, at least 10",
+    "submit": "Publish review",
+    "sending": "Publishing…",
+    "thanks": "Thank you! Your review has been published.",
+    "sentToast": "Review published",
+    "publicNote": "All visitors will see your review. Do not include your phone number, address or other personal data.",
+    "loading": "Loading reviews…",
+    "loadMore": "Show more",
+    "emptyTitle": "No reviews yet",
+    "emptyText": "Be the first to share your impression.",
+    "unavailableTitle": "Reviews are temporarily unavailable",
+    "notConfigured": "The reviews database is not connected: reviews are not loaded or saved. The site administrator needs to set up Firebase (see README).",
+    "count_one": "{{count}} review",
+    "count_other": "{{count}} reviews",
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars",
+    "errors": {
+      "not-configured": "The reviews database is not connected. Please try again later.",
+      "permission": "The server rejected the review. Check the fields and try again.",
+      "network": "Cannot reach the server. Check your internet connection and try again.",
+      "cooldown": "You have just posted a review. Please wait a minute before the next one.",
+      "failed": "The request failed. Please try again a little later."
+    }
+  },
+  "payment": {
+    "title": "Bank card payment",
+    "amount": "Amount due",
+    "holder": "Cardholder name",
+    "number": "Card number",
+    "expiry": "Expiry date (MM/YY)",
+    "demoMode": "DEMO MODE — no real money is charged",
+    "confirm": "Confirm payment (DEMO)",
+    "cancel": "Cancel",
+    "successTitle": "Demo payment successful",
+    "successText": "{{amount}} was “paid” in demo mode. No money was charged.",
+    "placingOrder": "Placing your order…"
+  },
+  "paymentStatus": {
+    "label": "Payment status",
+    "paidDemo": "Paid (DEMO)",
+    "awaitingPayment": "Awaiting payment"
+  },
+  "regions": {
+    "bishkek": "Bishkek city",
+    "chui": "Chui Region",
+    "osh": "Osh Region",
+    "jalalabad": "Jalal-Abad Region",
+    "issykkul": "Issyk-Kul Region",
+    "naryn": "Naryn Region",
+    "talas": "Talas Region",
+    "batken": "Batken Region"
+  }
+}
