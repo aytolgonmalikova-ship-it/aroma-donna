@@ -699,5 +699,10 @@
     "naryn": "Naryn Region",
     "talas": "Talas Region",
     "batken": "Batken Region"
+  },
+  "floatingContacts": {
+    "title": "Quick contact",
+    "whatsapp": "Message us on WhatsApp (opens in a new tab)",
+    "instagram": "Open our Instagram (opens in a new tab)"
   }
 }

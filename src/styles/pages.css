@@ -81,6 +81,55 @@
     order: -1;
   }
 }
+/* Мобильный баннер: по умолчанию скрыт, показывается только на телефонах */
+.hero__mobile,
+.hero__mobile-actions {
+  display: none;
+}
+@media (max-width: 768px) {
+  .hero {
+    background: var(--bg);
+  }
+  .hero__mobile {
+    display: block;
+  }
+  .hero__mobile-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+    padding-bottom: 24px;
+  }
+  .hero__mobile-actions .btn {
+    width: 100%;
+    max-width: 420px;
+    justify-content: center;
+  }
+  .hero__mobile-actions .hero__stats {
+    justify-content: center;
+    margin-top: 24px;
+    text-align: center;
+  }
+  .hero__mobile-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+  }
+  /* Текст и кнопки уже есть на картинке — визуально прячем HTML-версию, оставляя её для SEO и скринридеров */
+  .hero__inner {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
 @media (max-width: 480px) {
   .hero__stats {
     gap: 20px;

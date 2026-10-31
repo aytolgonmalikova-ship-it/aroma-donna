@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import Notification from '../components/common/Notification';
+import FloatingContacts from '../components/layout/FloatingContacts';
 
 /**
  * Общий макет всех страниц: шапка + содержимое страницы (<Outlet />) + подвал.
@@ -28,6 +29,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <Footer />
+      <FloatingContacts />
       <Notification />
     </div>
   );

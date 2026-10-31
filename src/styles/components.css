@@ -1139,3 +1139,112 @@ select.field__control {
 .accordion__panel p {
   margin: 0;
 }
+
+/* ---------- Плавающие кнопки быстрой связи ---------- */
+.floating-contacts {
+  --fc-size: 54px;
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 90; /* над контентом и шапкой, под мобильным меню, фильтрами, модалками и уведомлениями */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.floating-contacts__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--fc-size);
+  height: var(--fc-size);
+  border-radius: 50%;
+  color: #fff;
+  border: 2px solid var(--gold-soft);
+  box-shadow: 0 6px 18px rgba(169, 82, 95, 0.28);
+  opacity: 0;
+  animation: fcAppear 0.5s ease forwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.floating-contacts__btn:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.floating-contacts__btn--whatsapp {
+  background: #25d366;
+}
+.floating-contacts__btn--instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
+}
+.floating-contacts__icon {
+  width: 52%;
+  height: 52%;
+}
+.floating-contacts__btn:hover,
+.floating-contacts__btn:focus-visible {
+  transform: scale(1.1);
+  box-shadow: 0 10px 26px rgba(169, 82, 95, 0.38);
+}
+.floating-contacts__btn:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+/* Подпись слева от кнопки при наведении */
+.floating-contacts__tooltip {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--gold-soft);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(6px, -50%);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.floating-contacts__btn:hover .floating-contacts__tooltip,
+.floating-contacts__btn:focus-visible .floating-contacts__tooltip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+@keyframes fcAppear {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 768px) {
+  .floating-contacts {
+    --fc-size: 46px;
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+  .floating-contacts--hide-mobile {
+    display: none;
+  }
+  /* Место под кнопками, чтобы они не закрывали низ подвала */
+  .footer {
+    padding-bottom: 130px;
+  }
+}
+/* На сенсорных экранах подпись не нужна — нет наведения */
+@media (hover: none) {
+  .floating-contacts__tooltip {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-contacts__btn {
+    animation: none;
+    opacity: 1;
+  }
+}
