@@ -4,6 +4,11 @@ import { ADMIN_SECTIONS } from '../../components/admin/adminSections';
 import AdminLayout from '../../layouts/AdminLayout';
 import AdminDashboardPage from './AdminDashboardPage';
 import AdminSectionPage from './AdminSectionPage';
+import AdminOrdersPage from './AdminOrdersPage';
+import AdminOrderPage from './AdminOrderPage';
+
+// Готовые разделы; остальные пока показывают заглушку AdminSectionPage
+const SECTION_PAGES = { orders: AdminOrdersPage };
 
 /**
  * Админ-панель (/admin/*). Загружается отдельным файлом (React.lazy в App.jsx),
@@ -15,9 +20,11 @@ export default function AdminApp() {
       <Routes>
         <Route element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
-          {ADMIN_SECTIONS.map((s) => (
-            <Route key={s.path} path={s.path} element={<AdminSectionPage section={s} />} />
-          ))}
+          {ADMIN_SECTIONS.map((s) => {
+            const Page = SECTION_PAGES[s.path];
+            return <Route key={s.path} path={s.path} element={Page ? <Page /> : <AdminSectionPage section={s} />} />;
+          })}
+          <Route path="orders/:userId/:orderId" element={<AdminOrderPage />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
       </Routes>

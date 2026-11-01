@@ -273,3 +273,184 @@
     padding-right: 16px;
   }
 }
+
+/* ---------- Заказы (этап 3) ---------- */
+.admin-page__head--row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-badge--ready {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.admin-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.admin-filter:hover {
+  border-color: var(--primary);
+}
+.admin-filter.is-active {
+  color: var(--primary);
+  background: var(--rose-soft);
+  border-color: var(--primary);
+}
+.admin-filter__count {
+  min-width: 22px;
+  padding: 1px 7px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.admin-table th,
+.admin-table td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.admin-table th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.admin-table tbody tr:hover {
+  background: var(--surface-2);
+}
+.admin-table td small {
+  display: block;
+  color: var(--text-muted);
+}
+.admin-table__link {
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.admin-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.admin-back:hover {
+  color: var(--primary);
+}
+
+.admin-order {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.admin-order__items {
+  grid-column: 1 / -1;
+}
+
+.admin-status-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.admin-status-form label {
+  font-weight: 600;
+}
+.admin-status-form .field__control {
+  flex: 1 1 180px;
+  width: auto;
+}
+.admin-muted {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.admin-dl {
+  margin: 0;
+}
+.admin-dl > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 40%) 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.admin-dl > div:last-child {
+  border-bottom: 0;
+}
+.admin-dl dt {
+  color: var(--text-muted);
+}
+.admin-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.admin-pre {
+  white-space: pre-line;
+}
+
+/* Телефоны: таблица заказов превращается в карточки */
+@media (max-width: 640px) {
+  .admin-table thead {
+    display: none;
+  }
+  .admin-table tr {
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .admin-table td {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px;
+    padding: 6px 16px;
+    border-bottom: 0;
+  }
+  .admin-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+  }
+}

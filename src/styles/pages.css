@@ -1087,6 +1087,21 @@
   color: var(--warning);
 }
 
+/* Статусы заказа, которые выставляет администратор (видны и покупателю в личном кабинете) */
+.order__status--confirmed,
+.order__status--shipped {
+  background: var(--info-bg);
+  color: var(--info);
+}
+.order__status--delivered {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.order__status--cancelled {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
 /* Окно DEMO-оплаты банковской картой */
 .payment-modal-overlay {
   position: fixed;

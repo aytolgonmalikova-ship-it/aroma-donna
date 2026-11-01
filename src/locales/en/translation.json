@@ -431,7 +431,11 @@
   },
   "orderStatus": {
     "demo": "Demo order",
-    "new": "New"
+    "new": "New",
+    "confirmed": "Confirmed",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
   },
   "success": {
     "title": "Order placed",
@@ -738,6 +742,44 @@
       "orders": "Orders",
       "customers": "Customers",
       "sections": "Sections"
+    },
+    "ready": "Ready",
+    "orders": {
+      "subtitle": "Orders from registered customers. Newest first.",
+      "guestNote": "Guest orders (placed without signing in) are stored only in the customer's browser and sent to Telegram — they are not shown here yet.",
+      "refresh": "Refresh",
+      "filterLabel": "Filter by status",
+      "all": "All",
+      "empty": "No orders yet",
+      "emptyFiltered": "No orders with this status",
+      "number": "Number",
+      "date": "Date",
+      "customer": "Customer",
+      "total": "Total",
+      "status": "Status",
+      "order": "Order",
+      "back": "All orders",
+      "notFound": "Order not found",
+      "statusTitle": "Order status",
+      "saveStatus": "Save status",
+      "statusSaved": "Order {{id}} status updated",
+      "statusUpdatedAt": "Status changed: {{date}}",
+      "confirmCancel": "Cancel order {{id}}?",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "deliveryMethod": "Delivery method",
+      "address": "Address",
+      "comment": "Comment",
+      "items": "Order items",
+      "subtotal": "Items",
+      "deliveryCost": "Delivery",
+      "errors": {
+        "failed": "Could not load data. Please try again.",
+        "network": "No internet connection.",
+        "denied": "Access denied. Make sure the stage 3 Firestore rules are published and sign in again.",
+        "not-configured": "Firebase is not configured."
+      }
     }
   }
 }

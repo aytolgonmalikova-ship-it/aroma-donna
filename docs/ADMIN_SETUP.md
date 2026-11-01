@@ -61,3 +61,39 @@ npx firebase-tools deploy --only firestore:rules
     (`createdAt == request.time`), при изменении его менять нельзя;
   - удаление профиля из браузера запрещено.
 - `users/{uid}/orders/{orderId}` и `reviews` — без изменений.
+
+## 4. Этап 3 — раздел «Заказы»
+
+Страницы: `/admin/orders` (список, фильтр по статусу) и
+`/admin/orders/{uid}/{orderId}` (подробности и смена статуса).
+
+### Что изменилось в правилах
+
+- Новое правило `match /{path=**}/orders/{orderId}` — **только чтение и только для `isAdmin()`**.
+  Оно нужно для запроса `collectionGroup('orders')`, которым админка читает заказы всех покупателей.
+- `users/{uid}/orders/{orderId}`:
+  - `update` — только `isAdmin()` и только поля `status` и `statusUpdatedAt`;
+    статус — из списка `new, confirmed, shipped, delivered, cancelled`
+    (тот же список в `src/utils/orderStatus.js`, совпадение проверяет `npm test`);
+    `statusUpdatedAt` ставит сервер (`serverTimestamp`). Состав, сумму, адрес и данные покупателя изменить нельзя;
+  - `create` — дополнительно требуется `status == 'new'` (покупатель не может сразу создать «доставленный» заказ);
+  - покупатель по-прежнему читает только свои заказы и ничего в них не меняет; `delete` запрещён всем.
+
+### Индекс
+
+Для сортировки по дате в запросе `collectionGroup('orders')` нужен одиночный индекс
+`createdAt` (по убыванию) с областью **Collection group**. Он описан в `firestore.indexes.json`
+(`fieldOverrides`). Создать его можно одним из способов:
+
+- Firebase Console → Firestore → Indexes → **Single field** → Add exemption:
+  коллекция `orders`, поле `createdAt`, включить **Descending** для **Collection group**
+  (индексы для Collection не выключать);
+- или `npx firebase-tools deploy --only firestore:indexes`.
+
+Пока индекса нет, админка всё равно работает: она прочитает заказы без сортировки
+и отсортирует их в браузере (в консоли будет предупреждение).
+
+### Гостевые заказы
+
+Заказы без входа в аккаунт в Firestore **не сохраняются** — только в `localStorage`
+браузера покупателя и в сообщении Telegram. Поэтому в админке их нет.

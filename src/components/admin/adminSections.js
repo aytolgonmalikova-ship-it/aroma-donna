@@ -1,7 +1,8 @@
 // Разделы админ-панели: из этого списка строятся и боковое меню, и маршруты.
 // stage — этап плана, на котором раздел станет рабочим (пока показывается заглушка).
+// ready — раздел уже работает (страница задана в AdminApp.jsx).
 export const ADMIN_SECTIONS = [
-  { path: 'orders', icon: 'cart', stage: 3 },
+  { path: 'orders', icon: 'cart', stage: 3, ready: true },
   { path: 'products', icon: 'drop', stage: 5 },
   { path: 'customers', icon: 'user', stage: 4 },
   { path: 'reviews', icon: 'star', stage: 4 },

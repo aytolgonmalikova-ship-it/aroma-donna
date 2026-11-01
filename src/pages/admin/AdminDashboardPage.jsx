@@ -7,6 +7,7 @@ import { ADMIN_SECTIONS } from '../../components/admin/adminSections';
 import { selectProducts, selectProductsStatus } from '../../features/products/productsSlice';
 import { selectUser } from '../../features/user/userSlice';
 import { fetchReviewStats } from '../../services/reviewsService';
+import { fetchOrdersCount } from '../../services/adminService';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 /** Карточка показателя: значение или «скоро» для разделов, которые ещё не подключены */
@@ -25,9 +26,9 @@ function StatCard({ icon, label, value, hint }) {
 
 /**
  * Главная страница админ-панели (каркас).
- * Сейчас показывает только данные, которые уже доступны без новых прав:
- * число товаров каталога и статистику отзывов (она публичная).
- * Заказы и покупатели появятся после обновления правил на этапах 3–4.
+ * Показывает число товаров каталога, статистику отзывов (она публичная)
+ * и число заказов (доступно администратору по правилам этапа 3).
+ * Покупатели появятся на этапе 4.
  */
 export default function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
@@ -35,6 +36,7 @@ export default function AdminDashboardPage() {
   const products = useSelector(selectProducts);
   const productsStatus = useSelector(selectProductsStatus);
   const [reviewStats, setReviewStats] = useState(null); // null — загрузка, false — ошибка
+  const [ordersCount, setOrdersCount] = useState(null); // null — загрузка, false — ошибка
   useDocumentTitle(t('admin.dashboard.title'));
 
   useEffect(() => {
@@ -42,6 +44,9 @@ export default function AdminDashboardPage() {
     fetchReviewStats()
       .then((stats) => !cancelled && setReviewStats(stats))
       .catch(() => !cancelled && setReviewStats(false));
+    fetchOrdersCount()
+      .then((count) => !cancelled && setOrdersCount(count))
+      .catch(() => !cancelled && setOrdersCount(false));
     return () => {
       cancelled = true;
     };
@@ -71,7 +76,11 @@ export default function AdminDashboardPage() {
         />
         <StatCard icon="star" label={t('admin.dashboard.reviews')} value={reviewsValue} />
         <StatCard icon="sparkle" label={t('admin.dashboard.rating')} value={ratingValue} />
-        <StatCard icon="cart" label={t('admin.dashboard.orders')} value={soon} hint={t('admin.stageHint', { stage: 3 })} />
+        <StatCard
+          icon="cart"
+          label={t('admin.dashboard.orders')}
+          value={ordersCount === null ? '…' : ordersCount === false ? '—' : ordersCount}
+        />
         <StatCard icon="user" label={t('admin.dashboard.customers')} value={soon} hint={t('admin.stageHint', { stage: 4 })} />
       </div>
 
@@ -83,7 +92,9 @@ export default function AdminDashboardPage() {
               <Link to={`/admin/${s.path}`}>
                 <Icon name={s.icon} size={18} /> {t(`admin.nav.${s.path}`)}
               </Link>
-              <span className="admin-badge">{t('admin.stageHint', { stage: s.stage })}</span>
+              <span className={`admin-badge${s.ready ? ' admin-badge--ready' : ''}`}>
+                {s.ready ? t('admin.ready') : t('admin.stageHint', { stage: s.stage })}
+              </span>
             </li>
           ))}
         </ul>
