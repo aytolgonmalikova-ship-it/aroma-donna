@@ -10,3 +10,6 @@ dist-ssr
 !.vscode/extensions.json
 npm-debug.log*
 *.zip
+.firebase/
+firebase-debug.log*
+firestore-debug.log*

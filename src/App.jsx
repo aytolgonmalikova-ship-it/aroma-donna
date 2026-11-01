@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import LoadingSpinner from './components/common/LoadingSpinner';
 import HomePage from './pages/HomePage';
 import CatalogPage from './pages/CatalogPage';
 import ProductPage from './pages/ProductPage';
@@ -22,6 +23,9 @@ import NotFoundPage from './pages/NotFoundPage';
 import { fetchProducts } from './features/products/productsSlice';
 import { setUser } from './features/user/userSlice';
 import { subscribeToAuth } from './services/authService';
+
+// Админ-панель — отдельный файл, загружается только при открытии /admin
+const AdminApp = lazy(() => import('./pages/admin/AdminApp'));
 
 /**
  * App — корневой компонент приложения.
@@ -66,6 +70,14 @@ export default function App() {
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
+      <Route
+        path="admin/*"
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <AdminApp />
+          </Suspense>
+        }
+      />
     </Routes>
   );
 }

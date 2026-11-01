@@ -1,0 +1,275 @@
+/* ==========================================================================
+   Админ-панель. Подключается только в AdminLayout (отдельный чанк),
+   использует общие дизайн-токены из variables.css — тёмная тема работает сама.
+   ========================================================================== */
+
+.admin {
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  min-height: 100vh;
+  background: var(--bg-alt);
+}
+
+/* ---------- Боковое меню ---------- */
+.admin__sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.admin__brand {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  padding: 0 10px;
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--heading);
+  text-decoration: none;
+}
+.admin__brand em {
+  font-style: normal;
+  color: var(--primary);
+}
+.admin__brand span {
+  padding: 2px 8px;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border-radius: var(--radius-pill);
+}
+
+.admin__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+.admin__link:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.admin__link.active {
+  background: var(--rose-soft);
+  color: var(--primary);
+}
+
+/* ---------- Верхняя панель и содержимое ---------- */
+.admin__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 28px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.admin__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin__main {
+  flex: 1;
+  padding: 28px;
+  outline: none;
+}
+
+.admin-page__head {
+  margin-bottom: 24px;
+}
+.admin-page__head h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  color: var(--heading);
+}
+.admin-page__head p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* ---------- Показатели ---------- */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px;
+}
+.admin-stat__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  color: var(--primary);
+  background: var(--blush);
+}
+.admin-stat__label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.admin-stat__value {
+  font-size: 1.7rem;
+  color: var(--heading);
+}
+.admin-stat__hint {
+  color: var(--text-muted);
+}
+
+/* ---------- Блок разделов ---------- */
+.admin-panel {
+  padding: 22px;
+}
+.admin-panel h2 {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+}
+
+.admin-roadmap {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-roadmap li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.admin-roadmap li:first-child {
+  border-top: 0;
+}
+.admin-roadmap a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+.admin-roadmap a:hover {
+  color: var(--primary);
+}
+
+.admin-badge {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  color: var(--info);
+  background: var(--info-bg);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+/* ---------- Экран «нет доступа» ---------- */
+.admin-gate {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-alt);
+}
+.admin-gate__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 480px;
+  padding: 36px 28px;
+  text-align: center;
+}
+.admin-gate__card h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  color: var(--heading);
+}
+.admin-gate__card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+.admin-gate__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: var(--primary);
+  background: var(--blush);
+}
+
+/* ---------- Планшеты и телефоны: меню становится горизонтальной лентой ---------- */
+@media (max-width: 899px) {
+  .admin {
+    grid-template-columns: 1fr;
+  }
+  .admin__sidebar {
+    position: static;
+    height: auto;
+    gap: 12px;
+    padding: 14px 16px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin__nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .admin__topbar,
+  .admin__main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

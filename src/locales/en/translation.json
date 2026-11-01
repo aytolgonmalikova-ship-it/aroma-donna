@@ -704,5 +704,40 @@
     "title": "Quick contact",
     "whatsapp": "Message us on WhatsApp (opens in a new tab)",
     "instagram": "Open our Instagram (opens in a new tab)"
+  },
+  "admin": {
+    "title": "Admin panel",
+    "badge": "Admin",
+    "navLabel": "Admin panel sections",
+    "backToShop": "Back to shop",
+    "checking": "Checking access rights…",
+    "checkError": "Could not verify administrator rights. Please check your internet connection.",
+    "deniedTitle": "Access denied",
+    "deniedText": "The account {{email}} has no administrator rights. If this is a mistake, contact the shop owner.",
+    "unavailableTitle": "Admin panel unavailable",
+    "unavailableText": "The site is running in demo mode without Firebase. The admin panel requires Firebase: administrator rights are verified on the server.",
+    "soon": "Soon",
+    "soonTitle": "Section in progress",
+    "soonText": "This section will be available at stage {{stage}}.",
+    "stageHint": "Stage {{stage}}",
+    "nav": {
+      "dashboard": "Overview",
+      "orders": "Orders",
+      "products": "Products",
+      "customers": "Customers",
+      "reviews": "Reviews",
+      "admins": "Administrators"
+    },
+    "dashboard": {
+      "title": "Overview",
+      "greeting": "Hello, {{name}}! This is the AROMA DONNA control panel.",
+      "products": "Products in catalog",
+      "productsHint": "Currently from the catalog file",
+      "reviews": "Reviews",
+      "rating": "Average rating",
+      "orders": "Orders",
+      "customers": "Customers",
+      "sections": "Sections"
+    }
   }
 }

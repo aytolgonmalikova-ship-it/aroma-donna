@@ -6,22 +6,66 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Администратор — тот, у кого есть документ admins/{uid}.
+    // Создать такой документ из браузера нельзя (см. правило admins ниже):
+    // только вручную в Firebase Console или сервером через Firebase Admin SDK.
+    // Пока функция нигде не используется: права администратора добавляются отдельным этапом.
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // Профиль пользователя: users/{uid}
+    // Разрешены только поля name, email, createdAt — поэтому записать себе роль
+    // (role, isAdmin и т.п.) невозможно.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+                    && request.resource.data.keys().hasOnly(['name', 'email', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.email is string
+                    // Время ставит сервер Firebase (serverTimestamp), подделать дату нельзя
+                    && request.resource.data.createdAt == request.time;
+
+      allow update: if isOwner(userId)
+                    && request.resource.data.keys().hasOnly(['name', 'email', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.email is string
+                    // Дату регистрации менять нельзя
+                    && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false;
 
       // Заказы пользователя: users/{uid}/orders/{orderId}
       match /orders/{orderId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
         // Создавать можно только свой заказ с корректной суммой; изменять и удалять нельзя
-        allow create: if request.auth != null
-                      && request.auth.uid == userId
+        allow create: if isOwner(userId)
+                      && request.resource.data.id == orderId
+                      && request.resource.data.userId == userId
                       && request.resource.data.total is number
                       && request.resource.data.total >= 0
                       && request.resource.data.items is list
                       && request.resource.data.items.size() > 0;
         allow update, delete: if false;
       }
+    }
+
+    // Администраторы: admins/{uid}
+    // Пользователь может прочитать только СВОЙ документ — так интерфейс узнаёт, админ ли он.
+    // Список админов и любые изменения из браузера запрещены
+    // (Firebase Console и Admin SDK правила не проверяют).
+    match /admins/{adminId} {
+      allow get: if isOwner(adminId);
+      allow list, create, update, delete: if false;
     }
 
     // Отзывы покупателей: reviews/{reviewId}
