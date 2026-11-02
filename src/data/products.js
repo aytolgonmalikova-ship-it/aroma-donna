@@ -1,6 +1,10 @@
 /**
  * Демонстрационный каталог AROMA DONNA.
  *
+ * С этапа 5а основной источник товаров — коллекция Firestore products/{id}.
+ * Этот файл — резервный каталог: он показывается в демо-режиме (без Firebase)
+ * и пока коллекция пуста, а также служит исходными данными для импорта в админке.
+ *
  * ВАЖНО: бренды, описания, рейтинги и наличие — вымышленные учебные данные.
  * Это не официальные сведения производителей и не реальные остатки склада.
  *
@@ -510,11 +514,7 @@ export const CATEGORIES = ['women', 'men', 'unisex'];
 export const FAMILIES = ['floral', 'fruity', 'oriental', 'woody', 'citrus', 'gourmand', 'aquatic', 'aromatic'];
 export const CONCENTRATIONS = ['edt', 'edp', 'parfum'];
 export const INTENSITIES = ['light', 'moderate', 'intense'];
-export const BRANDS = [...new Set(products.map((p) => p.brand))].sort();
-
-export const PRICE_LIMITS = {
-  min: Math.min(...products.map((p) => p.price)),
-  max: Math.max(...products.map((p) => p.volumes[p.volumes.length - 1].price)),
-};
+// Бренды и диапазон цен считаются из загруженного каталога —
+// см. selectBrands / selectPriceLimits в features/products/productsSlice.js
 
 export const getProductById = (id) => products.find((p) => p.id === id);

@@ -1,16 +1,25 @@
 import { createSlice, createSelector } from '@reduxjs/toolkit';
 import { calcDiscount } from '../../utils/promo';
+import { fetchProducts } from '../products/productsSlice';
+import {
+  MAX_QUANTITY,
+  buildCartLines,
+  changeItemVolume,
+  countCartItems,
+  hasUnavailableLines,
+  makeKey,
+  pruneCartItems,
+} from '../../utils/cart';
 
 /**
  * Корзина.
  * В состоянии храним только id товара, выбранный объём и количество.
  * Название, картинку и цену берём из каталога — так данные не дублируются
  * и цена всегда актуальна (единый источник правды).
+ * Сопоставление с каталогом — чистые функции в utils/cart.js.
  */
 
-export const MAX_QUANTITY = 10;
-
-const makeKey = (id, volume) => `${id}__${volume}`;
+export { MAX_QUANTITY };
 
 const initialState = {
   items: [], // [{ key, id, volume, quantity }]
@@ -49,6 +58,11 @@ const cartSlice = createSlice({
       const item = state.items.find((i) => i.key === key);
       if (item) item.quantity = Math.max(1, Math.min(MAX_QUANTITY, Number(quantity) || 1));
     },
+    // Выбрать другой объём (например, если прежнего объёма больше нет в каталоге)
+    changeCartItemVolume(state, action) {
+      const { key, volume } = action.payload;
+      state.items = changeItemVolume(state.items, key, volume);
+    },
     clearCart(state) {
       state.items = [];
       state.promoCode = null;
@@ -65,6 +79,16 @@ const cartSlice = createSlice({
       }
     },
   },
+  extraReducers: (builder) => {
+    // Каталог загружен — убираем из корзины (и из localStorage) товары, которых в нём больше нет.
+    // При ошибке загрузки ничего не трогаем: по ошибке нельзя судить, что товар удалён.
+    builder.addCase(fetchProducts.fulfilled, (state, action) => {
+      const kept = pruneCartItems(state.items, action.payload.items);
+      if (kept === state.items) return;
+      state.items = kept;
+      if (kept.length === 0) state.promoCode = null;
+    });
+  },
 });
 
 export const {
@@ -73,6 +97,7 @@ export const {
   increaseQuantity,
   decreaseQuantity,
   setQuantity,
+  changeCartItemVolume,
   clearCart,
   applyPromoCode,
   removePromoCode,
@@ -86,28 +111,20 @@ export default cartSlice.reducer;
 const selectCartState = (state) => state.cart;
 const selectRawItems = (state) => state.cart.items;
 const selectCatalog = (state) => state.products.items;
+const selectCatalogLoaded = (state) => state.products.status === 'succeeded';
 
-/** Позиции корзины, дополненные данными товара из каталога */
-export const selectCartItems = createSelector([selectRawItems, selectCatalog], (items, catalog) =>
-  items
-    .map((item) => {
-      const product = catalog.find((p) => p.id === item.id);
-      if (!product) return null;
-      const variant = product.volumes.find((v) => v.ml === item.volume) || product.volumes[0];
-      return {
-        ...item,
-        product,
-        price: variant.price,
-        lineTotal: variant.price * item.quantity,
-      };
-    })
-    .filter(Boolean),
-);
+/**
+ * Позиции корзины, дополненные данными товара из каталога.
+ * Позиция с недоступным объёмом остаётся с volumeAvailable: false и без цены —
+ * цена другого объёма не подставляется.
+ */
+export const selectCartItems = createSelector([selectRawItems, selectCatalog], buildCartLines);
 
-/** Количество штук в корзине — для значка в шапке */
-export const selectCartCount = createSelector([selectRawItems], (items) =>
-  items.reduce((sum, item) => sum + item.quantity, 0),
-);
+/** Есть позиции, которые нельзя оформить: оформление заказа блокируется */
+export const selectCartHasUnavailable = createSelector([selectCartItems], hasUnavailableLines);
+
+/** Количество штук в корзине — для значка в шапке (только товары из загруженного каталога) */
+export const selectCartCount = createSelector([selectRawItems, selectCatalog, selectCatalogLoaded], countCartItems);
 
 export const selectCartSubtotal = createSelector([selectCartItems], (items) =>
   items.reduce((sum, item) => sum + item.lineTotal, 0),

@@ -503,3 +503,14 @@
   display: block;
   margin: 2px 0 0;
 }
+
+/* ---------- Товары: источник каталога и импорт (этап 5а) ---------- */
+.admin-products > * + * {
+  margin-top: 16px;
+}
+.admin-import p {
+  margin: 0 0 14px;
+}
+.admin-import .error-message {
+  margin-top: 14px;
+}

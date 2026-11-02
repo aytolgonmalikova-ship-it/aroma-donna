@@ -1,4 +1,6 @@
 import { createSlice, createSelector } from '@reduxjs/toolkit';
+import { fetchProducts } from '../products/productsSlice';
+import { countFavorites, pruneFavoriteIds } from '../../utils/cart';
 
 // Избранное: храним только список id товаров.
 // Все кнопки «сердечко» читают этот список из Redux, поэтому их состояние
@@ -19,6 +21,12 @@ const favoritesSlice = createSlice({
       state.ids = [];
     },
   },
+  extraReducers: (builder) => {
+    // Каталог загружен — убираем id товаров, которых в нём больше нет (при ошибке загрузки — не трогаем)
+    builder.addCase(fetchProducts.fulfilled, (state, action) => {
+      state.ids = pruneFavoriteIds(state.ids, action.payload.items);
+    });
+  },
 });
 
 export const { toggleFavorite, removeFavorite, clearFavorites } = favoritesSlice.actions;
@@ -30,4 +38,10 @@ export const selectIsFavorite = (id) => (state) => state.favorites.ids.includes(
 export const selectFavoriteProducts = createSelector(
   [selectFavoriteIds, (state) => state.products.items],
   (ids, catalog) => ids.map((id) => catalog.find((p) => p.id === id)).filter(Boolean),
+);
+
+/** Количество избранного для значка — только товары из загруженного каталога */
+export const selectFavoriteCount = createSelector(
+  [selectFavoriteIds, (state) => state.products.items, (state) => state.products.status === 'succeeded'],
+  countFavorites,
 );

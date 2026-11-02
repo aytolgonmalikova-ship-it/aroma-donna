@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { selectCartCount, selectCartTotals } from '../../features/cart/cartSlice';
+import { selectCartCount, selectCartHasUnavailable, selectCartTotals } from '../../features/cart/cartSlice';
 import { formatPrice } from '../../utils/format';
 import PromoCodeForm from './PromoCodeForm';
 import Icon from '../common/Icon';
@@ -14,6 +14,7 @@ export default function CartSummary({ delivery, showCheckout = true, showPromo =
   const { t } = useTranslation();
   const count = useSelector(selectCartCount);
   const { subtotal, discount, total, promoCode } = useSelector(selectCartTotals);
+  const hasUnavailable = useSelector(selectCartHasUnavailable);
   const grandTotal = total + (delivery || 0);
 
   return (
@@ -57,10 +58,19 @@ export default function CartSummary({ delivery, showCheckout = true, showPromo =
       </dl>
       {showPromo && <PromoCodeForm />}
       {children}
-      {showCheckout && (
-        <Link to="/checkout"
-        onClick={()=> console.log('Нажали оформить заказэ')}
-         className="btn btn--primary btn--lg btn--block">
+      {/* Позиция с недоступным объёмом — оформлять нельзя, пока покупатель не выберет другой объём */}
+      {showCheckout && hasUnavailable && (
+        <>
+          <p className="summary__blocked" role="alert">
+            {t('cart.fixVolumes')}
+          </p>
+          <button type="button" className="btn btn--primary btn--lg btn--block" disabled>
+            {t('cart.checkout')} <Icon name="arrowRight" size={18} />
+          </button>
+        </>
+      )}
+      {showCheckout && !hasUnavailable && (
+        <Link to="/checkout" className="btn btn--primary btn--lg btn--block">
           {t('cart.checkout')} <Icon name="arrowRight" size={18} />
         </Link>
       )}

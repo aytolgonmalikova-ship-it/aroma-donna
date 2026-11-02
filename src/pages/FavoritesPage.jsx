@@ -4,16 +4,18 @@ import PageHeader from '../components/common/PageHeader';
 import FavoritesList from '../components/cart/FavoritesList';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import CatalogLoadError from '../components/common/CatalogLoadError';
 import { clearFavorites, selectFavoriteProducts } from '../features/favorites/favoritesSlice';
 import { selectProductsStatus } from '../features/products/productsSlice';
 import { notify } from '../features/notifications/notificationsSlice';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { catalogView } from '../utils/catalogStatus';
 
 export default function FavoritesPage() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const products = useSelector(selectFavoriteProducts);
-  const status = useSelector(selectProductsStatus);
+  const view = catalogView(useSelector(selectProductsStatus));
   useDocumentTitle(t('favorites.title'));
 
   return (
@@ -24,8 +26,10 @@ export default function FavoritesPage() {
         crumbs={[{ label: t('favorites.title') }]}
       />
       <div className="container section--tight">
-        {status !== 'succeeded' ? (
+        {view === 'loading' ? (
           <LoadingSpinner />
+        ) : view === 'error' ? (
+          <CatalogLoadError />
         ) : products.length === 0 ? (
           <EmptyState
             icon="heart"

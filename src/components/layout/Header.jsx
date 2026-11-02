@@ -10,14 +10,14 @@ import ThemeToggle from '../common/ThemeToggle';
 import LanguageSwitcher from '../common/LanguageSwitcher';
 import Icon from '../common/Icon';
 import { selectCartCount } from '../../features/cart/cartSlice';
-import { selectFavoriteIds } from '../../features/favorites/favoritesSlice';
+import { selectFavoriteCount } from '../../features/favorites/favoritesSlice';
 import { selectUser } from '../../features/user/userSlice';
 
 /** Шапка сайта: логотип, меню, поиск, язык, тема, избранное, кабинет, корзина */
 export default function Header() {
   const { t } = useTranslation();
   const cartCount = useSelector(selectCartCount);
-  const favoritesCount = useSelector(selectFavoriteIds).length;
+  const favoritesCount = useSelector(selectFavoriteCount);
   const user = useSelector(selectUser);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);

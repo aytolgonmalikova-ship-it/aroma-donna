@@ -8,9 +8,10 @@ import AdminOrdersPage from './AdminOrdersPage';
 import AdminOrderPage from './AdminOrderPage';
 import AdminCustomersPage from './AdminCustomersPage';
 import AdminCustomerPage from './AdminCustomerPage';
+import AdminProductsPage from './AdminProductsPage';
 
 // Готовые разделы; остальные пока показывают заглушку AdminSectionPage
-const SECTION_PAGES = { orders: AdminOrdersPage, customers: AdminCustomersPage };
+const SECTION_PAGES = { orders: AdminOrdersPage, customers: AdminCustomersPage, products: AdminProductsPage };
 
 /**
  * Админ-панель (/admin/*). Загружается отдельным файлом (React.lazy в App.jsx),

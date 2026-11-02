@@ -13,10 +13,11 @@
 import { getFirebase, isFirebaseConfigured } from './firebase';
 import { isOrderStatus } from '../utils/orderStatus';
 import { buildCustomers } from '../utils/customers';
+import { prepareCatalogImport } from '../utils/products';
 
 export const isAdminAvailable = isFirebaseConfigured;
 
-/** Ошибка с кодом для интерфейса: not-configured, network, denied, failed */
+/** Ошибка с кодом для интерфейса: not-configured, network, denied, failed, not-empty, invalid */
 export class AdminError extends Error {
   constructor(code, cause) {
     super(code);
@@ -186,6 +187,56 @@ export async function fetchCustomersCount() {
     const { db, dbApi } = await getFirebase();
     const snap = await dbApi.getCountFromServer(dbApi.collection(db, 'users'));
     return snap.data().count;
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+// ---------- Товары (этап 5а) ----------
+// Каталог лежит в products/{id}. Правила firestore.rules: посетитель читает только видимые
+// товары, администратор — все, запись — только администратор и только в строгом формате.
+
+/** Количество всех товаров в Firestore, включая скрытые (запрос без фильтра разрешён только админу) */
+export async function fetchProductsCount() {
+  try {
+    const { db, dbApi } = await getFirebase();
+    const snap = await dbApi.getCountFromServer(dbApi.collection(db, 'products'));
+    return snap.data().count;
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+/**
+ * Первичный импорт демо-каталога в пустую коллекцию products.
+ * Документы получают прежние id товаров, поэтому ссылки, корзины и избранное продолжают работать.
+ *
+ * Защита от дубликатов и перезаписи:
+ * 1) до записи проверяем, что в коллекции нет ни одного документа (любого id) — иначе 'not-empty';
+ * 2) запись — одна транзакция: она заново читает все 24 документа и прерывается,
+ *    если хоть один уже существует (например, импорт запустили одновременно в двух вкладках).
+ * Транзакция записывает либо весь каталог, либо ничего.
+ */
+export async function importDemoCatalog(products) {
+  let docs;
+  try {
+    docs = prepareCatalogImport(products);
+  } catch (err) {
+    throw new AdminError('invalid', err);
+  }
+  try {
+    const { db, dbApi } = await getFirebase();
+    const collection = dbApi.collection(db, 'products');
+    const existing = await dbApi.getDocs(dbApi.query(collection, dbApi.limit(1)));
+    if (!existing.empty) throw new AdminError('not-empty');
+
+    await dbApi.runTransaction(db, async (tx) => {
+      const refs = docs.map((d) => dbApi.doc(collection, d.id));
+      const snaps = await Promise.all(refs.map((ref) => tx.get(ref)));
+      if (snaps.some((snap) => snap.exists())) throw new AdminError('not-empty');
+      refs.forEach((ref, i) => tx.set(ref, { ...docs[i], updatedAt: dbApi.serverTimestamp() }));
+    });
+    return docs.length;
   } catch (err) {
     throw toAdminError(err);
   }

@@ -8,9 +8,16 @@ import DemoCardPaymentModal from '../components/forms/DemoCardPaymentModal';
 import CartSummary from '../components/cart/CartSummary';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import CatalogLoadError from '../components/common/CatalogLoadError';
 import DemoNotice from '../components/common/DemoNotice';
 import ProductImage from '../components/common/ProductImage';
-import { clearCart, markPromoCodeUsed, selectCartItems, selectCartTotals } from '../features/cart/cartSlice';
+import {
+  clearCart,
+  markPromoCodeUsed,
+  selectCartHasUnavailable,
+  selectCartItems,
+  selectCartTotals,
+} from '../features/cart/cartSlice';
 import { selectProductsStatus } from '../features/products/productsSlice';
 import { selectAuthState } from '../features/user/userSlice';
 import { notify } from '../features/notifications/notificationsSlice';
@@ -18,6 +25,7 @@ import { createOrder } from '../services/orderService';
 import { calcDelivery } from '../utils/promo';
 import { createOrderId, formatPrice } from '../utils/format';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { catalogView } from '../utils/catalogStatus';
 
 /**
  * Оформление заказа (демонстрационное).
@@ -35,7 +43,8 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const items = useSelector(selectCartItems);
   const { subtotal, discount, total, promoCode } = useSelector(selectCartTotals);
-  const status = useSelector(selectProductsStatus); console.log('Статус товаров', status);
+  const hasUnavailable = useSelector(selectCartHasUnavailable);
+  const view = catalogView(useSelector(selectProductsStatus));
   const { current: user, mode } = useSelector(selectAuthState);
   const [deliveryMethod, setDeliveryMethod] = useState('courier');
   const [submitting, setSubmitting] = useState(false);
@@ -47,10 +56,15 @@ export default function CheckoutPage() {
   const delivery = calcDelivery(deliveryMethod, total);
   const grandTotal = total + delivery;
 
-  if (status !== 'succeeded') {
-  console.log('Страница ждёт товары. Текущий статус:', status);
-  return <LoadingSpinner />;
-}
+  if (view === 'loading') return <LoadingSpinner />;
+
+  if (view === 'error') {
+    return (
+      <div className="container section">
+        <CatalogLoadError />
+      </div>
+    );
+  }
 
   if (items.length === 0 && !submittedRef.current) {
     return (
@@ -67,6 +81,22 @@ export default function CheckoutPage() {
     );
   }
 
+  // Выбранного объёма больше нет в каталоге — заказ с такими данными оформлять нельзя
+  if (hasUnavailable && !submittedRef.current) {
+    return (
+      <div className="container section">
+        <EmptyState
+          headingLevel="h1"
+          icon="cart"
+          title={t('checkout.fixCartTitle')}
+          text={t('cart.fixVolumes')}
+          actionLabel={t('checkout.editCart')}
+          actionTo="/cart"
+        />
+      </div>
+    );
+  }
+
   // Форма уже проверила данные покупателя
   const handleFormSubmit = (values) => {
     setSubmitError('');
@@ -78,6 +108,11 @@ export default function CheckoutPage() {
   };
 
   const placeOrder = async (values, paymentStatus) => {
+    // Повторная защита: в заказ не попадает позиция без подтверждённой цены объёма
+    if (hasUnavailable || items.some((i) => !i.volumeAvailable)) {
+      setSubmitError(t('cart.fixVolumes'));
+      return;
+    }
     setSubmitting(true);
     setSubmitError('');
     // В заказ попадают только нужные для доставки данные (минимум личной информации)

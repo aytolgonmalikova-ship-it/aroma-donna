@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { logoutUser } from '../../features/user/userSlice';
 import { notify } from '../../features/notifications/notificationsSlice';
-import { selectFavoriteIds } from '../../features/favorites/favoritesSlice';
+import { selectFavoriteCount } from '../../features/favorites/favoritesSlice';
 import { selectCartCount } from '../../features/cart/cartSlice';
 import { formatDate } from '../../utils/format';
 import Icon from '../common/Icon';
@@ -13,7 +13,7 @@ export default function UserProfile({ user, mode, ordersCount }) {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const favoritesCount = useSelector(selectFavoriteIds).length;
+  const favoritesCount = useSelector(selectFavoriteCount);
   const cartCount = useSelector(selectCartCount);
 
   const handleLogout = async () => {

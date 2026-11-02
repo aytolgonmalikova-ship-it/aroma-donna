@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/common/Icon';
 import { ADMIN_SECTIONS } from '../../components/admin/adminSections';
-import { selectProducts, selectProductsStatus } from '../../features/products/productsSlice';
+import { selectProducts, selectProductsSource, selectProductsStatus } from '../../features/products/productsSlice';
 import { selectUser } from '../../features/user/userSlice';
 import { fetchReviewStats } from '../../services/reviewsService';
 import { fetchCustomersCount, fetchOrdersCount } from '../../services/adminService';
@@ -34,6 +34,7 @@ export default function AdminDashboardPage() {
   const user = useSelector(selectUser);
   const products = useSelector(selectProducts);
   const productsStatus = useSelector(selectProductsStatus);
+  const productsSource = useSelector(selectProductsSource);
   const [reviewStats, setReviewStats] = useState(null); // null — загрузка, false — ошибка
   const [ordersCount, setOrdersCount] = useState(null); // null — загрузка, false — ошибка
   const [customersCount, setCustomersCount] = useState(null); // null — загрузка, false — ошибка
@@ -73,8 +74,8 @@ export default function AdminDashboardPage() {
         <StatCard
           icon="drop"
           label={t('admin.dashboard.products')}
-          value={productsStatus === 'succeeded' ? products.length : '…'}
-          hint={t('admin.dashboard.productsHint')}
+          value={productsStatus === 'succeeded' ? products.length : productsStatus === 'failed' ? '—' : '…'}
+          hint={productsSource ? t(`admin.dashboard.productsSource.${productsSource}`) : undefined}
         />
         <StatCard icon="star" label={t('admin.dashboard.reviews')} value={reviewsValue} />
         <StatCard icon="sparkle" label={t('admin.dashboard.rating')} value={ratingValue} />

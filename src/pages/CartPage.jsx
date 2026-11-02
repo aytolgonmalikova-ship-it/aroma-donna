@@ -6,17 +6,19 @@ import CartItem from '../components/cart/CartItem';
 import CartSummary from '../components/cart/CartSummary';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import CatalogLoadError from '../components/common/CatalogLoadError';
 import Icon from '../components/common/Icon';
 import { clearCart, selectCartItems } from '../features/cart/cartSlice';
 import { selectProductsStatus } from '../features/products/productsSlice';
 import { notify } from '../features/notifications/notificationsSlice';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { catalogView } from '../utils/catalogStatus';
 
 export default function CartPage() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const items = useSelector(selectCartItems);
-  const status = useSelector(selectProductsStatus);
+  const view = catalogView(useSelector(selectProductsStatus));
   useDocumentTitle(t('cart.title'));
 
   const handleClear = () => {
@@ -30,8 +32,10 @@ export default function CartPage() {
     <>
       <PageHeader title={t('cart.title')} crumbs={[{ label: t('cart.title') }]} />
       <div className="container section--tight">
-        {status !== 'succeeded' ? (
+        {view === 'loading' ? (
           <LoadingSpinner />
+        ) : view === 'error' ? (
+          <CatalogLoadError />
         ) : items.length === 0 ? (
           <EmptyState
             icon="cart"

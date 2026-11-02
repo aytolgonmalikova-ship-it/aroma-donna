@@ -272,7 +272,9 @@
     "emptyTitle": "Your cart is empty",
     "emptyText": "Add fragrances from the catalog — the cart is kept even after a page refresh.",
     "goToCatalog": "Go to catalog",
-    "paymentNote": "Pay in cash to the courier or by bank card in DEMO mode — no money is charged."
+    "paymentNote": "Pay in cash to the courier or by bank card in DEMO mode — no money is charged.",
+    "volumeUnavailable": "The {{volume}} ml size is no longer available. Choose another size or remove the item:",
+    "fixVolumes": "Your cart has an item in a size that is no longer available. Choose an available size or remove the item to place the order."
   },
   "promo": {
     "label": "Promo code",
@@ -304,6 +306,7 @@
     "agree": "I agree to the processing of the data provided to place the order",
     "placeOrder": "Confirm order",
     "editCart": "Edit order items",
+    "fixCartTitle": "Your cart needs updating",
     "emptyTitle": "Nothing to check out",
     "emptyText": "Your cart is empty. Add fragrances from the catalog.",
     "demoNotice": "Demo mode: the order is saved only in this browser. It is not sent to a store, no money is charged and nothing will be delivered.",
@@ -736,7 +739,11 @@
       "title": "Overview",
       "greeting": "Hello, {{name}}! This is the AROMA DONNA control panel.",
       "products": "Products in catalog",
-      "productsHint": "Currently from the catalog file",
+      "productsSource": {
+        "firestore": "From Firestore (visible in the shop)",
+        "fallback": "Fallback catalog: no products in Firestore",
+        "demo": "Demo catalog (no Firebase)"
+      },
       "reviews": "Reviews",
       "rating": "Average rating",
       "orders": "Orders",
@@ -823,6 +830,35 @@
         "network": "No internet connection.",
         "denied": "Access denied. Make sure the stage 4 Firestore rules are published and sign in again.",
         "not-configured": "Firebase is not configured."
+      }
+    },
+    "products": {
+      "subtitle": "Where the shop gets its products, and the initial catalog transfer to Firestore.",
+      "refresh": "Refresh",
+      "catalogTitle": "Catalog",
+      "storefront": "Shop is showing",
+      "inFirestore": "Products in Firestore (including hidden)",
+      "source": {
+        "firestore": "Firestore — visible products: {{count}}",
+        "fallback": "Fallback catalog from file ({{count}} products) — the products collection is empty",
+        "demo": "Demo catalog from file ({{count}} products)",
+        "failed": "Could not load the shop catalog"
+      },
+      "importTitle": "Import demo catalog",
+      "importText": "The products collection in Firestore is empty, so shoppers see the fallback catalog from the file. Import copies it to Firestore with the same product ids — links, carts and favorites keep working. Import runs once and only into an empty collection.",
+      "importButton": "Import demo catalog ({{count}} products)",
+      "importing": "Importing…",
+      "importConfirm": "Write {{count}} demo catalog products to Firestore?",
+      "imported": "Products imported: {{count}}. The shop now reads the catalog from Firestore.",
+      "importDone": "The catalog is already in Firestore ({{count}} products). Import is only available for an empty collection.",
+      "nextStage": "Product list, search and editing will arrive in stage 5b.",
+      "errors": {
+        "failed": "The operation failed. Please try again.",
+        "network": "No internet connection.",
+        "denied": "Access denied. Check that the stage 5a Firestore rules are published, then sign in again.",
+        "not-configured": "Firebase is not connected.",
+        "not-empty": "The products collection is no longer empty — import cancelled, nothing was written.",
+        "invalid": "The demo catalog failed the format check — import cancelled."
       }
     }
   }

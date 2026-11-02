@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next';
 import Breadcrumbs from '../components/common/Breadcrumbs';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
+import CatalogLoadError from '../components/common/CatalogLoadError';
 import ProductGallery from '../components/products/ProductGallery';
 import ProductInfo from '../components/products/ProductInfo';
 import RelatedProducts from '../components/products/RelatedProducts';
 import { selectProductById, selectProductsStatus } from '../features/products/productsSlice';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { productPageView } from '../utils/catalogStatus';
 
 /** Страница товара: /product/:id. id берётся из адреса с помощью useParams */
 export default function ProductPage() {
@@ -16,11 +18,23 @@ export default function ProductPage() {
   const { t } = useTranslation();
   const status = useSelector(selectProductsStatus);
   const product = useSelector(selectProductById(id));
-  useDocumentTitle(product ? `${product.name} — ${product.brand}` : t('product.notFoundTitle'));
+  const view = productPageView(status, product);
+  useDocumentTitle(
+    product ? `${product.name} — ${product.brand}` : view === 'notFound' ? t('product.notFoundTitle') : t('nav.catalog'),
+  );
 
-  if (status === 'idle' || status === 'loading') return <LoadingSpinner />;
+  if (view === 'loading') return <LoadingSpinner />;
 
-  if (!product) {
+  // Каталог не загрузился — это не «товар не найден»: показываем ошибку и «Повторить»
+  if (view === 'error') {
+    return (
+      <div className="container section">
+        <CatalogLoadError />
+      </div>
+    );
+  }
+
+  if (view === 'notFound') {
     return (
       <div className="container section">
         <EmptyState

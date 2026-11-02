@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import FilterGroup from './FilterGroup';
+import { getBrands } from '../../utils/products';
 
 /** Фильтр по бренду (список брендов строится из товаров каталога) */
 export default function BrandFilter({ products, selected, onToggle }) {
   const { t } = useTranslation();
-  const brands = [...new Set(products.map((p) => p.brand))].sort();
+  const brands = getBrands(products);
   const options = brands.map((brand) => ({
     value: brand,
     label: brand,

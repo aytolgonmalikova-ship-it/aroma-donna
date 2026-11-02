@@ -3,7 +3,7 @@ rules_version = '2';
 // Правила безопасности Firestore для AROMA DONNA.
 // Каждый пользователь может читать и изменять ТОЛЬКО свой профиль и свои заказы.
 // Администратор (документ admins/{uid}) может читать профили покупателей и все заказы
-// и менять только статус заказа.
+// и менять только статус заказа, а также управлять каталогом products (этап 5а).
 // Проверка выполняется на стороне сервера Firebase, а не только в интерфейсе.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -19,7 +19,8 @@ service cloud.firestore {
     // Администратор — тот, у кого есть документ admins/{uid}.
     // Создать такой документ из браузера нельзя (см. правило admins ниже):
     // только вручную в Firebase Console или сервером через Firebase Admin SDK.
-    // Даёт права: чтение всех заказов и смена их статуса (этап 3), чтение профилей users (этап 4).
+    // Даёт права: чтение всех заказов и смена их статуса (этап 3), чтение профилей users (этап 4),
+    // чтение и запись товаров products (этап 5а).
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -114,6 +115,81 @@ service cloud.firestore {
           && (!('lang' in review) || review.lang in ['ru', 'ky', 'en'])
           // Время ставит сервер Firebase (serverTimestamp), подделать дату нельзя
           && review.createdAt == request.time;
+    }
+
+    // Товары каталога: products/{productId}
+    // Посетитель читает только видимые товары (hidden == false). Запрос витрины обязан
+    // содержать фильтр where('hidden', '==', false) — иначе Firestore его отклонит.
+    // Администратор читает все товары (и скрытые), создаёт, изменяет и удаляет их.
+    // Формат проверяется здесь же; тот же формат — в src/utils/products.js.
+    match /products/{productId} {
+      // isAdmin() первым: для несуществующего документа resource == null
+      allow read: if isAdmin() || resource.data.hidden == false;
+      allow create, update: if isAdmin() && isValidProduct(request.resource.data, productId);
+      allow delete: if isAdmin();
+    }
+
+    function isValidProduct(p, productId) {
+      return p.keys().hasOnly(['id', 'name', 'brand', 'category', 'concentration', 'fragranceFamily',
+                               'intensity', 'notes', 'rating', 'popularity', 'availability', 'isNew',
+                               'isBestseller', 'description', 'volumes', 'price', 'image', 'hidden',
+                               'updatedAt'])
+          && p.keys().hasAll(['id', 'name', 'brand', 'category', 'concentration', 'fragranceFamily',
+                              'intensity', 'notes', 'rating', 'popularity', 'availability', 'isNew',
+                              'isBestseller', 'description', 'volumes', 'price', 'image', 'hidden',
+                              'updatedAt'])
+          // id в данных совпадает с id документа (он же адрес /product/{id})
+          && p.id == productId
+          && productId.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && productId.size() <= 60
+          && p.name is string && p.name.size() >= 1 && p.name.size() <= 100
+          && p.brand is string && p.brand.size() >= 1 && p.brand.size() <= 100
+          && p.category in ['women', 'men', 'unisex']
+          && p.concentration in ['edt', 'edp', 'parfum']
+          && p.fragranceFamily in ['floral', 'fruity', 'oriental', 'woody', 'citrus', 'gourmand', 'aquatic', 'aromatic']
+          && p.intensity in ['light', 'moderate', 'intense']
+          && p.availability in ['inStock', 'lowStock', 'outOfStock']
+          && p.isNew is bool && p.isBestseller is bool && p.hidden is bool
+          && p.rating is number && p.rating >= 0 && p.rating <= 5
+          && p.popularity is number && p.popularity >= 0 && p.popularity <= 100
+          && p.image is string && p.image.size() <= 500
+          && p.price is number && p.price > 0 && p.price <= 10000000
+          && isValidProductText(p.description)
+          && isValidProductNotes(p.notes)
+          && isValidVolumes(p.volumes)
+          // Время ставит сервер Firebase (serverTimestamp), подделать дату нельзя
+          && p.updatedAt == request.time;
+    }
+
+    function isValidProductText(d) {
+      return d is map
+          && d.keys().hasOnly(['ru', 'ky', 'en']) && d.keys().hasAll(['ru', 'ky', 'en'])
+          && d.ru is string && d.ru.size() >= 1 && d.ru.size() <= 2000
+          && d.ky is string && d.ky.size() >= 1 && d.ky.size() <= 2000
+          && d.en is string && d.en.size() >= 1 && d.en.size() <= 2000;
+    }
+
+    function isValidProductNotes(n) {
+      return n is map
+          && n.keys().hasOnly(['top', 'heart', 'base']) && n.keys().hasAll(['top', 'heart', 'base'])
+          && n.top is list && n.top.size() <= 10
+          && n.heart is list && n.heart.size() <= 10
+          && n.base is list && n.base.size() <= 10;
+    }
+
+    // Объёмы: от 1 до 4 вариантов { ml, price }. Циклов в правилах нет — проверяем по индексам
+    function isValidVolumes(v) {
+      return v is list && v.size() >= 1 && v.size() <= 4
+          && isValidVolume(v[0])
+          && (v.size() < 2 || isValidVolume(v[1]))
+          && (v.size() < 3 || isValidVolume(v[2]))
+          && (v.size() < 4 || isValidVolume(v[3]));
+    }
+
+    function isValidVolume(item) {
+      return item is map
+          && item.keys().hasOnly(['ml', 'price']) && item.keys().hasAll(['ml', 'price'])
+          && item.ml is int && item.ml > 0 && item.ml <= 1000
+          && item.price is number && item.price > 0 && item.price <= 10000000;
     }
 
     // Всё остальное закрыто

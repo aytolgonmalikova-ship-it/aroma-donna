@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { PRICE_LIMITS } from '../../data/products';
+import { selectPriceLimits } from '../../features/products/productsSlice';
 
 /**
  * Фильтр по цене «от — до».
  * Значения применяются по кнопке «Применить» или Enter, чтобы список
  * не перестраивался на каждую введённую цифру.
+ * Подсказки «от / до» — диапазон цен загруженного каталога.
  */
 export default function PriceFilter({ minPrice, maxPrice, onApply }) {
   const { t } = useTranslation();
   const [min, setMin] = useState(minPrice);
   const [max, setMax] = useState(maxPrice);
   const [error, setError] = useState('');
+  const limits = useSelector(selectPriceLimits);
 
   // Синхронизация, если фильтры сброшены снаружи
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function PriceFilter({ minPrice, maxPrice, onApply }) {
           inputMode="numeric"
           min="0"
           step="100"
-          placeholder={`${t('filters.priceFrom')} ${PRICE_LIMITS.min}`}
+          placeholder={limits ? `${t('filters.priceFrom')} ${limits.min}` : t('filters.priceFrom')}
           value={min}
           onChange={(e) => setMin(e.target.value)}
         />
@@ -52,7 +55,7 @@ export default function PriceFilter({ minPrice, maxPrice, onApply }) {
           inputMode="numeric"
           min="0"
           step="100"
-          placeholder={`${t('filters.priceTo')} ${PRICE_LIMITS.max}`}
+          placeholder={limits ? `${t('filters.priceTo')} ${limits.max}` : t('filters.priceTo')}
           value={max}
           onChange={(e) => setMax(e.target.value)}
         />
