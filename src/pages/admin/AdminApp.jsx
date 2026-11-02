@@ -9,6 +9,7 @@ import AdminOrderPage from './AdminOrderPage';
 import AdminCustomersPage from './AdminCustomersPage';
 import AdminCustomerPage from './AdminCustomerPage';
 import AdminProductsPage from './AdminProductsPage';
+import AdminProductFormPage from './AdminProductFormPage';
 
 // Готовые разделы; остальные пока показывают заглушку AdminSectionPage
 const SECTION_PAGES = { orders: AdminOrdersPage, customers: AdminCustomersPage, products: AdminProductsPage };
@@ -29,6 +30,9 @@ export default function AdminApp() {
           })}
           <Route path="orders/:userId/:orderId" element={<AdminOrderPage />} />
           <Route path="customers/:uid" element={<AdminCustomerPage />} />
+          {/* key: создание и изменение — разные экземпляры формы, состояние не переносится */}
+          <Route path="products/new" element={<AdminProductFormPage key="new" />} />
+          <Route path="products/:id/edit" element={<AdminProductFormPage key="edit" />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
       </Routes>

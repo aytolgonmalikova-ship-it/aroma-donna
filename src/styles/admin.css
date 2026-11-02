@@ -514,3 +514,264 @@
 .admin-import .error-message {
   margin-top: 14px;
 }
+
+/* ---------- Товары: список (этап 5б) ---------- */
+.admin-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-products__summary {
+  padding: 6px 18px;
+}
+.admin-products__summary small {
+  color: var(--text-muted);
+}
+.admin-products__damaged {
+  display: flex;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-radius: var(--radius);
+}
+.admin-products__damaged svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.admin-products__damaged p {
+  margin: 4px 0 6px;
+  color: var(--text);
+}
+.admin-products__damaged ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-products__damaged a {
+  font-weight: 600;
+  color: var(--primary);
+}
+.admin-products__table td {
+  vertical-align: middle;
+}
+.admin-products__table .admin-badge {
+  margin-top: 4px;
+}
+.admin-products__table tr.is-hidden td {
+  color: var(--text-muted);
+}
+.admin-products__thumb {
+  display: block;
+  width: 48px;
+  height: 53px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+.admin-products__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-products__table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Телефоны: фото и кнопка — во всю строку карточки, без подписи слева */
+@media (max-width: 640px) {
+  .admin-products__table td:first-child,
+  .admin-products__table td:last-child {
+    display: block;
+    text-align: left;
+  }
+  .admin-products__table td:first-child::before,
+  .admin-products__table td:last-child::before {
+    content: none;
+  }
+  .admin-products__thumb {
+    width: 64px;
+    height: 70px;
+  }
+}
+
+/* ---------- Товары: форма создания и редактирования (этап 5б) ---------- */
+.admin-product-form {
+  max-width: 920px;
+}
+.admin-product-form .form__section {
+  margin: 0;
+  min-width: 0;
+}
+.admin-product-form .field__control[readonly] {
+  color: var(--text-muted);
+  background: var(--surface-2);
+  cursor: not-allowed;
+}
+.admin-product-form__counter {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  text-align: right;
+  color: var(--text-muted);
+}
+.admin-product-form__counter.is-over {
+  color: var(--error);
+}
+.admin-product-form__image {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.admin-product-form__image .field {
+  flex: 1;
+  min-width: 0;
+}
+.admin-product-form__thumb {
+  flex-shrink: 0;
+  width: 80px;
+  height: 88px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.admin-product-form__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-product-form__volumes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.admin-product-form__volume {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.admin-product-form__volume .field__control:disabled {
+  opacity: 0.55;
+}
+.admin-product-form__volume.field--error {
+  border-color: var(--error);
+}
+.admin-product-form__group--error {
+  border-color: var(--error);
+}
+.admin-product-form [tabindex='-1']:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+.admin-product-form__notes + .admin-product-form__notes {
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.admin-product-form__notes .field__label {
+  display: block;
+  margin: 0 0 8px;
+}
+.admin-product-form__count {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.admin-product-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin-product-form__chips .admin-filter {
+  padding: 5px 12px;
+  font-size: 0.84rem;
+}
+.admin-product-form__chips .admin-filter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.admin-product-form__flags {
+  display: grid;
+  align-content: end;
+  gap: 4px;
+}
+.admin-product-form__warnings {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 16px;
+  list-style: none;
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-radius: var(--radius-sm);
+}
+.admin-product-form__warnings li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.admin-product-form__warnings svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.admin-product-form__notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 920px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  color: var(--info);
+  background: var(--info-bg);
+  border-radius: var(--radius-sm);
+}
+.admin-product-form__notice--warning {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+.admin-product-form__notice svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.admin-product-form__save-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 920px;
+}
+.admin-product-form__save-error p {
+  margin: 0;
+}
+/* Кнопки остаются на виду при прокрутке длинной формы */
+.admin-product-form__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .admin-product-form__volumes {
+    grid-template-columns: 1fr;
+  }
+  .admin-product-form__image {
+    flex-direction: column;
+  }
+  .admin-product-form__actions .btn {
+    flex: 1;
+  }
+}

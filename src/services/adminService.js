@@ -14,25 +14,13 @@ import { getFirebase, isFirebaseConfigured } from './firebase';
 import { isOrderStatus } from '../utils/orderStatus';
 import { buildCustomers } from '../utils/customers';
 import { prepareCatalogImport } from '../utils/products';
+import { AdminError, toAdminError } from './adminErrors';
+import * as productsStore from './adminProductsStore';
+
+// Ошибка с кодом для интерфейса (коды — в adminErrors.js)
+export { AdminError };
 
 export const isAdminAvailable = isFirebaseConfigured;
-
-/** Ошибка с кодом для интерфейса: not-configured, network, denied, failed, not-empty, invalid */
-export class AdminError extends Error {
-  constructor(code, cause) {
-    super(code);
-    this.code = code;
-    this.cause = cause;
-  }
-}
-
-function toAdminError(err) {
-  if (err instanceof AdminError) return err;
-  if (err?.message === 'firebase-not-configured') return new AdminError('not-configured', err);
-  if (err?.code === 'unavailable' || err?.code === 'deadline-exceeded') return new AdminError('network', err);
-  if (err?.code === 'permission-denied') return new AdminError('denied', err);
-  return new AdminError('failed', err);
-}
 
 /**
  * Есть ли у пользователя роль администратора.
@@ -241,3 +229,29 @@ export async function importDemoCatalog(products) {
     throw toAdminError(err);
   }
 }
+
+// ---------- Управление товарами (этап 5б) ----------
+// Логика и транзакции — в adminProductsStore.js (проверяется тестами на модели Firestore),
+// здесь — подключение Firebase и единые коды ошибок. Скрытие и удаление — этап 5в.
+
+/** Вызвать функцию adminProductsStore с подключённым Firebase */
+async function withFirebase(fn, ...args) {
+  try {
+    return await fn(await getFirebase(), ...args);
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+/** Все товары, включая скрытые: { products, invalidIds } */
+export const fetchAllProducts = () => withFirebase(productsStore.fetchAllProducts);
+
+/** Товар для формы: { product, damaged, updatedAt }; нет товара — 'not-found' */
+export const fetchProductForEdit = (id) => withFirebase(productsStore.fetchProductForEdit, id);
+
+/** Создание: занятый id — 'id-taken', ничего не перезаписывается */
+export const createProduct = (data) => withFirebase(productsStore.createProduct, data);
+
+/** Изменение: id и hidden сохраняются; изменён после открытия формы — 'conflict'; удалён — 'not-found' */
+export const updateProduct = (id, data, loadedUpdatedAt) =>
+  withFirebase(productsStore.updateProduct, id, data, loadedUpdatedAt);

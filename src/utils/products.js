@@ -44,7 +44,7 @@ export const LIMITS = {
 };
 
 // id — латиница в нижнем регистре, цифры и дефисы: он же адрес страницы /product/{id}
-const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isText = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
