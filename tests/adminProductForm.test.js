@@ -40,7 +40,11 @@ test('форма не меняет id при редактировании и н�
   assert.match(form, /readOnly: isEdit/);
   assert.match(page, /if \(!isEdit && field === 'name' && !idTouched\)/);
   assert.doesNotMatch(form, /onChange\('hidden'|form\.hidden|name="hidden"/);
-  for (const src of [page, form]) assert.doesNotMatch(src, /deleteDoc|deleteProduct|hideProduct|setHidden/);
+  assert.doesNotMatch(form, /deleteDoc|deleteProduct|hideProduct|setHidden|setProductHidden/);
+  // Страница удаляет товар только через сервис deleteProduct (подэтап 5в.4); видимость — только через
+  // существующий сервис setProductHidden (подэтап 5в.5), без своей логики работы с Firestore
+  assert.doesNotMatch(page, /deleteDoc|hideProduct|setHidden\b|updateDoc|firebase\/firestore/);
+  assert.equal(page.match(/setProductHidden\(/g).length, 1);
 });
 
 test('предупреждение об уходе: вкладка и ссылки внутри сайта', () => {

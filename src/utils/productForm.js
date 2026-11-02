@@ -118,7 +118,7 @@ function formVolumes(form) {
 /**
  * Значения формы → данные документа products/{id} (без updatedAt — его ставит сервер).
  * hidden передаётся отдельно: при редактировании — значение из текущего документа,
- * при создании — false. Форма его не меняет (скрытие — этап 5в).
+ * при создании — false. Форма его не меняет: видимость переключает setProductHidden.
  * Вызывать после validateProductForm без ошибок.
  */
 export function formToProduct(form, { hidden = false } = {}) {

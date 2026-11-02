@@ -205,7 +205,8 @@ export function toCatalogProduct(id, data) {
     volume: volumes[0].ml,
     volumes,
     image: isText(data.image, LIMITS.image) ? data.image : `/images/products/${id}.jpg`,
-    hidden: data.hidden === true,
+    // Витрина запрашивает только hidden == false: документ без этого поля покупатель не видит
+    hidden: data.hidden !== false,
     updatedAt: toIsoDate(data.updatedAt),
   };
 }

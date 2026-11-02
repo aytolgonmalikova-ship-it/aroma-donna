@@ -120,13 +120,16 @@ service cloud.firestore {
     // Товары каталога: products/{productId}
     // Посетитель читает только видимые товары (hidden == false). Запрос витрины обязан
     // содержать фильтр where('hidden', '==', false) — иначе Firestore его отклонит.
-    // Администратор читает все товары (и скрытые), создаёт, изменяет и удаляет их.
+    // Администратор читает все товары (и скрытые), создаёт и изменяет их,
+    // а удаляет только предварительно скрытые (hidden == true, этап 5c.8).
     // Формат проверяется здесь же; тот же формат — в src/utils/products.js.
     match /products/{productId} {
       // isAdmin() первым: для несуществующего документа resource == null
       allow read: if isAdmin() || resource.data.hidden == false;
       allow create, update: if isAdmin() && isValidProduct(request.resource.data, productId);
-      allow delete: if isAdmin();
+      // Видимый товар удалить нельзя — сначала его нужно скрыть.
+      // Для несуществующего документа resource == null — удаление запрещено.
+      allow delete: if isAdmin() && resource.data.hidden == true;
     }
 
     function isValidProduct(p, productId) {

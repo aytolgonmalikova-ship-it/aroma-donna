@@ -11,17 +11,22 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import CatalogLoadError from '../components/common/CatalogLoadError';
 import DemoNotice from '../components/common/DemoNotice';
 import ProductImage from '../components/common/ProductImage';
+import CheckoutReviewNotice from '../components/cart/CheckoutReviewNotice';
 import {
   clearCart,
   markPromoCodeUsed,
+  removeFromCart,
+  selectCartEntries,
   selectCartHasUnavailable,
   selectCartItems,
   selectCartTotals,
 } from '../features/cart/cartSlice';
-import { selectProductsStatus } from '../features/products/productsSlice';
+import { catalogRefreshed, selectProductsSource, selectProductsStatus } from '../features/products/productsSlice';
 import { selectAuthState } from '../features/user/userSlice';
 import { notify } from '../features/notifications/notificationsSlice';
 import { createOrder } from '../services/orderService';
+import { fetchProductsApi } from '../services/productsApi';
+import { buildOrder, reviewCheckout } from '../utils/checkoutReview';
 import { calcDelivery } from '../utils/promo';
 import { createOrderId, formatPrice } from '../utils/format';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -34,6 +39,16 @@ import { catalogView } from '../utils/catalogStatus';
  *   • «Банковской картой»: открываем окно DEMO-оплаты, и только после её успеха
  *     сохраняем заказ со статусом «Оплачен (DEMO)».
  * Далее: сохранение (orderService) → Telegram → страница успеха → очистка корзины.
+ *
+ * Перед окном оплаты и ещё раз прямо перед сохранением каталог заново читается из Firestore
+ * (fetchProductsApi), и корзина сверяется с ним (utils/checkoutReview.js). Заказ собирается
+ * только из этих свежих данных, а не из Redux или localStorage:
+ *   • товар скрыт, удалён, нет в наличии или нет выбранного объёма — заказ не оформляется,
+ *     покупатель может удалить такие позиции, выбрать другой объём в корзине или вернуться в каталог;
+ *   • изменилась цена или итог — показываются новые цены и сумма, нужно подтвердить заказ ещё раз;
+ *   • каталог витрины переключился на резервный (демо) или не загрузился — заказ не оформляется.
+ * Свежий каталог попадает в Redux без очистки корзины (catalogRefreshed), чтобы сумма на странице
+ * и в окне оплаты была актуальной.
  * Деньги не списываются. Данные карты остаются внутри DemoCardPaymentModal
  * и в объект заказа не попадают.
  */
@@ -42,7 +57,9 @@ export default function CheckoutPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const items = useSelector(selectCartItems);
-  const { subtotal, discount, total, promoCode } = useSelector(selectCartTotals);
+  const cartEntries = useSelector(selectCartEntries);
+  const catalogSource = useSelector(selectProductsSource);
+  const { total, promoCode } = useSelector(selectCartTotals);
   const hasUnavailable = useSelector(selectCartHasUnavailable);
   const view = catalogView(useSelector(selectProductsStatus));
   const { current: user, mode } = useSelector(selectAuthState);
@@ -50,6 +67,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [pendingOrder, setPendingOrder] = useState(null); // данные покупателя, ожидающие DEMO-оплаты
+  const [review, setReview] = useState(null); // итог проверки: { status: 'blocked' | 'confirm', values, … }
   const submittedRef = useRef(false); // чтобы после очистки корзины не показать «корзина пуста»
   useDocumentTitle(t('checkout.title'));
 
@@ -66,7 +84,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (items.length === 0 && !submittedRef.current) {
+  if (items.length === 0 && !submittedRef.current && !review) {
     return (
       <div className="container section">
         <EmptyState
@@ -82,7 +100,8 @@ export default function CheckoutPage() {
   }
 
   // Выбранного объёма больше нет в каталоге — заказ с такими данными оформлять нельзя
-  if (hasUnavailable && !submittedRef.current) {
+  // (если проверка перед оформлением уже нашла проблему — показывается её сообщение)
+  if (hasUnavailable && !submittedRef.current && !review) {
     return (
       <div className="container section">
         <EmptyState
@@ -97,75 +116,98 @@ export default function CheckoutPage() {
     );
   }
 
-  // Форма уже проверила данные покупателя
-  const handleFormSubmit = (values) => {
-    setSubmitError('');
-    if (values.payment === 'cardDemo') {
-      setPendingOrder(values); // открываем окно банковской карты
-      return;
+  /**
+   * Свежий каталог из Firestore и сверка корзины с ним. Возвращает итог reviewCheckout со статусом ok
+   * или null — тогда покупатель уже видит сообщение (ошибка, недоступные товары или новые цены).
+   */
+  const verifyCart = async (values) => {
+    let fresh;
+    try {
+      fresh = await fetchProductsApi(0);
+    } catch {
+      setSubmitError(t('checkout.review.verifyError'));
+      return null;
     }
-    placeOrder(values, 'awaitingPayment');
+    const result = reviewCheckout({
+      cartItems: cartEntries,
+      seenLines: items,
+      seenGrandTotal: grandTotal,
+      fresh,
+      expectedSource: catalogSource,
+      promoCode,
+      deliveryMethod,
+    });
+    if (result.status === 'unverified') {
+      // Резервный демо-каталог в Redux не попадает и заказ по нему не оформляется
+      setSubmitError(t('checkout.review.verifyError'));
+      return null;
+    }
+    dispatch(catalogRefreshed(fresh)); // страница и окно оплаты показывают актуальные цены
+    if (result.status !== 'ok') {
+      setReview({ ...result, values });
+      return null;
+    }
+    setReview(null);
+    return result;
   };
 
-  const placeOrder = async (values, paymentStatus) => {
-    // Повторная защита: в заказ не попадает позиция без подтверждённой цены объёма
-    if (hasUnavailable || items.some((i) => !i.volumeAvailable)) {
-      setSubmitError(t('cart.fixVolumes'));
+  // Форма уже проверила данные покупателя
+  const handleFormSubmit = async (values) => {
+    if (submitting) return;
+    setSubmitError('');
+    setSubmitting(true);
+    const checked = await verifyCart(values);
+    if (!checked) {
+      setSubmitting(false);
       return;
     }
+    if (values.payment === 'cardDemo') {
+      setSubmitting(false);
+      setPendingOrder(values); // открываем окно банковской карты с проверенной суммой
+      return;
+    }
+    placeOrder(values, 'awaitingPayment', checked);
+  };
+
+  /**
+   * Сохранение заказа. checked — итог проверки, если она только что прошла (наличные);
+   * после окна оплаты картой проверка повторяется: за это время каталог мог измениться.
+   */
+  const placeOrder = async (values, paymentStatus, checked = null) => {
     setSubmitting(true);
     setSubmitError('');
-    // В заказ попадают только нужные для доставки данные (минимум личной информации)
-    const order = {
+    const result = checked || (await verifyCart(values));
+    if (!result) {
+      setSubmitting(false);
+      return;
+    }
+    const order = buildOrder({
       id: createOrderId(),
       createdAt: new Date().toISOString(),
-      userId: user?.uid || null,
-      items: items.map((i) => ({
-        id: i.product.id,
-        name: i.product.name,
-        brand: i.product.brand,
-        volume: i.volume,
-        price: i.price,
-        quantity: i.quantity,
-      })),
-      subtotal,
-      discount,
-      promoCode: discount > 0 ? promoCode : null,
-      delivery,
-      total: grandTotal,
-      customer: {
-        name: values.name.trim(),
-        lastName: values.lastName.trim(),
-        phone: values.phone.trim(),
-        email: values.email.trim(),
-      },
-      shipping: {
-        method: values.delivery,
-        region: values.delivery === 'pickup' ? null : values.region,
-        city: values.delivery === 'pickup' ? null : values.city,
-        address: values.delivery === 'pickup' ? null : values.address.trim(),
-        comment: values.comment.trim(),
-      },
-      payment: values.payment,
-      paymentStatus, // 'paidDemo' — «Оплачен (DEMO)», 'awaitingPayment' — «Ожидает оплаты»
-    };
+      user,
+      lines: result.lines,
+      totals: result.totals,
+      promoCode,
+      values,
+      paymentStatus,
+    });
     try {
       const saved = await createOrder(order, user);
       try {
-  const response = await fetch('/api/order', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(saved),
-  });
+        const response = await fetch('/api/order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(saved),
+        });
 
-  if (!response.ok) {
-    console.error('Не удалось отправить заказ в Telegram');
-  }
-} catch (error) {
-  console.error('Ошибка отправки в Telegram:', error);
-}
+        if (!response.ok) {
+          console.error('Не удалось отправить заказ в Telegram');
+        }
+      } catch (error) {
+        console.error('Ошибка отправки в Telegram:', error);
+      }
       submittedRef.current = true;
       if (saved.promoCode) dispatch(markPromoCodeUsed(saved.promoCode));
       navigate(`/order-success/${saved.id}`, { state: { order: saved }, replace: true });
@@ -176,6 +218,20 @@ export default function CheckoutPage() {
       setSubmitting(false);
     }
   };
+
+  // Недоступные позиции — из корзины; затем покупатель снова подтверждает заказ
+  const handleRemoveProblems = () => {
+    review.problems.forEach((l) => dispatch(removeFromCart(l.key)));
+    setReview(null);
+  };
+
+  // Повторное подтверждение по новым ценам: та же проверка ещё раз (цены могли снова измениться)
+  const handleConfirmNewPrices = () => {
+    const { values } = review;
+    setReview(null);
+    handleFormSubmit(values);
+  };
+
   // Вызывается окном оплаты только после успешной DEMO-оплаты (данные карты сюда не передаются)
   const handleDemoPaymentSuccess = () => {
     const values = pendingOrder;
@@ -202,6 +258,15 @@ export default function CheckoutPage() {
           <p className="form__error" role="alert">
             {submitError}
           </p>
+        )}
+        {review && (
+          <CheckoutReviewNotice
+            review={review}
+            cardPayment={review.values.payment === 'cardDemo'}
+            submitting={submitting}
+            onRemoveProblems={handleRemoveProblems}
+            onConfirm={handleConfirmNewPrices}
+          />
         )}
         {pendingOrder && (
           <DemoCardPaymentModal

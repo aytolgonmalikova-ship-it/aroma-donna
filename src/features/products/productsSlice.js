@@ -25,7 +25,17 @@ const productsSlice = createSlice({
     error: null,
     source: null,
   },
-  reducers: {},
+  reducers: {
+    // Свежий каталог, прочитанный перед оформлением заказа. В отличие от fetchProducts.fulfilled,
+    // корзина и избранное не очищаются: покупатель должен увидеть, какие товары стали недоступны,
+    // и сам удалить их из корзины
+    catalogRefreshed(state, action) {
+      state.status = 'succeeded';
+      state.error = null;
+      state.items = action.payload.items;
+      state.source = action.payload.source;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchProducts.pending, (state) => {
@@ -43,6 +53,8 @@ const productsSlice = createSlice({
       });
   },
 });
+
+export const { catalogRefreshed } = productsSlice.actions;
 
 export default productsSlice.reducer;
 

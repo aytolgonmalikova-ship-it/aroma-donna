@@ -31,6 +31,9 @@ const PATHS = {
   logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11',
   drop: 'M12 3.5s6 6.4 6 10.8a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5z',
   refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7',
+  download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
+  eye: 'M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeOff: 'M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.8 3.4M6.6 6.6C4 8.3 2.5 12 2.5 12S6 18 12 18c1.9 0 3.5-.6 4.8-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2',
 };
 
 export default function Icon({ name, size = 20, filled = false, className = '', strokeWidth = 1.7 }) {

@@ -7,9 +7,17 @@ import EmptyState from '../../components/common/EmptyState';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ProductForm from '../../components/admin/ProductForm';
+import DeleteProductDialog from '../../components/admin/DeleteProductDialog';
 import { fetchProducts } from '../../features/products/productsSlice';
 import { notify } from '../../features/notifications/notificationsSlice';
-import { createProduct, fetchProductForEdit, updateProduct } from '../../services/adminService';
+import {
+  createProduct,
+  deleteProduct,
+  fetchProductForEdit,
+  setProductHidden,
+  updateProduct,
+} from '../../services/adminService';
+import { deleteBlockReason, productVisibilityState, visibilityErrorAction } from '../../utils/adminProducts';
 import {
   PRODUCT_FORM_FIELD_ORDER,
   emptyProductForm,
@@ -33,7 +41,16 @@ import { useUnsavedChangesPrompt } from '../../hooks/useUnsavedChangesPrompt';
  * - Изменение: updateProduct — id и hidden берутся из Firestore; если товар изменили после
  *   открытия формы — conflict: ничего не записывается, предлагается загрузить актуальную версию.
  * - Несохранённые изменения: вопрос перед уходом по ссылке, «Отменой» или закрытием вкладки.
- * Скрытие и удаление товаров — этап 5в.
+ * - Окончательное удаление (подэтап 5в.4): только скрытого товара, через окно DeleteProductDialog
+ *   (JSON-копия + ввод точного ID). deleteProduct получает updatedAt, с которым открыта форма:
+ *   если товар изменили или вернули на витрину — conflict / not-hidden, ничего не удаляется.
+ *   После удаления — возврат к списку (он загружается заново, счётчики пересчитываются).
+ *   Заказы не меняются: в них хранится копия позиции.
+ * Видимость (подэтап 5в.5): блок «Видимость на витрине» показывает состояние и переключает его через
+ *   setProductHidden с updatedAt, с которым открыта форма (изменён в другом окне — conflict, удалён — not-found).
+ *   Меняются только hidden и updatedAt. Пока в форме есть несохранённые изменения, переключение
+ *   заблокировано: сначала сохранить или отменить их. После успеха товар перечитывается — у него новая дата,
+ *   и следующее сохранение или удаление не получит ложный conflict. То же доступно в списке товаров.
  */
 export default function AdminProductFormPage() {
   const { id: routeId } = useParams();
@@ -55,6 +72,11 @@ export default function AdminProductFormPage() {
   const [saving, setSaving] = useState(false);
   const [focusTick, setFocusTick] = useState(0);
   const saveErrorRef = useRef(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [toggling, setToggling] = useState(false);
+  const [visibilityError, setVisibilityError] = useState(null);
 
   const title = isEdit
     ? t('admin.productForm.titleEdit', { name: loaded?.product?.name || routeId })
@@ -68,6 +90,9 @@ export default function AdminProductFormPage() {
     setLoadError(null);
     setErrors({});
     setSaveError(null);
+    setDeleteOpen(false);
+    setDeleteError(null);
+    setVisibilityError(null);
     fetchProductForEdit(routeId)
       .then((res) => {
         if (cancelled) return;
@@ -86,7 +111,7 @@ export default function AdminProductFormPage() {
 
   const dirty = JSON.stringify(form) !== initial;
   const leaveMessage = t('admin.productForm.confirmLeave');
-  useUnsavedChangesPrompt(dirty && !saving, leaveMessage);
+  useUnsavedChangesPrompt(dirty && !saving && !deleting, leaveMessage);
 
   const warnings = useMemo(() => getProductFormWarnings(form, loaded?.product || null), [form, loaded]);
 
@@ -127,7 +152,7 @@ export default function AdminProductFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (saving) return;
+    if (saving || toggling) return;
     setSaveError(null);
     const found = validateProductForm(form);
     setErrors(found);
@@ -168,6 +193,73 @@ export default function AdminProductFormPage() {
     load();
   };
 
+  const openDelete = () => {
+    setDeleteError(null);
+    setDeleteOpen(true);
+  };
+
+  const closeDelete = useCallback(() => {
+    setDeleteOpen(false);
+    setDeleteError(null);
+  }, []);
+
+  /**
+   * После переключения видимости — свежий документ (новая дата updatedAt).
+   * Форма не трогается: setProductHidden меняет только hidden. Если остальные поля в Firestore
+   * уже другие (товар одновременно изменили в другом окне) или перечитать не удалось (нет сети),
+   * остаётся прежняя дата: следующее сохранение получит conflict и предложит загрузить актуальную версию,
+   * а не затрёт чужие правки.
+   */
+  const refreshAfterToggle = async (hidden) => {
+    try {
+      const fresh = await fetchProductForEdit(routeId);
+      if (!fresh.damaged && JSON.stringify(productToForm(fresh.product)) === initial) {
+        setLoaded(fresh);
+        return;
+      }
+    } catch {
+      // Ниже — состояние без перечитывания
+    }
+    setLoaded((prev) => ({ ...prev, product: { ...prev.product, hidden } }));
+  };
+
+  const handleToggleHidden = async () => {
+    const state = productVisibilityState({ product: loaded.product, damaged: loaded.damaged, dirty, busy: false });
+    if (toggling || saving || deleting || !state.action || state.blocked) return;
+    const hidden = state.action === 'hide';
+    const name = loaded.product?.name || routeId;
+    setToggling(true);
+    setVisibilityError(null);
+    try {
+      await setProductHidden(routeId, hidden, loaded.updatedAt);
+      await refreshAfterToggle(hidden);
+      dispatch(notify({ message: hidden ? 'admin.products.hiddenDone' : 'admin.products.shownDone', params: { name } }));
+      dispatch(fetchProducts()); // витрина в этой вкладке сразу видит изменение
+    } catch (err) {
+      setVisibilityError(err.code || 'failed');
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    const name = loaded.product?.name || routeId;
+    try {
+      await deleteProduct(routeId, loaded.updatedAt);
+      dispatch(notify({ message: 'admin.productDelete.done', params: { name } }));
+      dispatch(fetchProducts()); // витрина в этой вкладке сразу без удалённого товара
+      setInitial(JSON.stringify(form)); // товара больше нет — вопрос о несохранённых изменениях не нужен
+      // replace: «Назад» в браузере не ведёт на форму удалённого товара; список загрузится заново
+      navigate(listPath, { replace: true });
+    } catch (err) {
+      setDeleteError(err.code || 'failed');
+      setDeleting(false);
+    }
+  };
+
   const back = (
     <Link to={listPath} className="admin-back">
       <Icon name="arrowLeft" size={16} /> {t('admin.productForm.back')}
@@ -200,6 +292,107 @@ export default function AdminProductFormPage() {
 
   const errorCount = Object.keys(errors).length;
 
+  // Раздел «Видимость на витрине»: состояние, кнопка «Скрыть» / «Вернуть» и причина, если она недоступна
+  const renderVisibilitySection = () => {
+    const state = productVisibilityState({
+      product: loaded.product,
+      damaged: loaded.damaged,
+      dirty,
+      busy: saving || deleting || toggling,
+    });
+    // Несохранённые изменения: объясняем, что сначала нужно сохранить или отменить их
+    const dirtyBlocked = state.blocked === 'dirty' && !toggling;
+    const hint = dirtyBlocked ? t('admin.productVisibility.dirtyHint') : t(`admin.productVisibility.text.${state.status}`);
+    const errorAction = visibilityErrorAction(visibilityError);
+    return (
+      <section className="admin-product-visibility" aria-labelledby="product-visibility-heading">
+        <div className="admin-product-visibility__info">
+          <h2 id="product-visibility-heading">
+            {t('admin.productVisibility.sectionTitle')}{' '}
+            <span className={`admin-badge admin-badge--${state.status}`} role="status">
+              {t(`admin.productVisibility.status.${state.status}`)}
+            </span>
+          </h2>
+          <p id="product-visibility-hint" className={dirtyBlocked ? 'is-warning' : undefined}>
+            {dirtyBlocked && <Icon name="alert" size={16} />} {hint}
+          </p>
+        </div>
+        {state.action && (
+          <button
+            type="button"
+            className={`btn ${state.action === 'show' ? 'btn--primary' : 'btn--outline'} admin-product-visibility__btn`}
+            onClick={handleToggleHidden}
+            disabled={Boolean(state.blocked) || deleteOpen}
+            aria-busy={toggling || undefined}
+            aria-describedby="product-visibility-hint"
+          >
+            <Icon name={state.action === 'hide' ? 'eyeOff' : 'eye'} size={16} />{' '}
+            {toggling ? t(`admin.productVisibility.busy.${state.action}`) : t(`admin.productVisibility.action.${state.action}`)}
+          </button>
+        )}
+        {visibilityError && (
+          <div className="form__error admin-product-visibility__error" role="alert">
+            <p>
+              {t(`admin.productVisibility.errors.${visibilityError}`, t('admin.productVisibility.errors.failed'))}
+            </p>
+            <div className="admin-product-visibility__error-actions">
+              {errorAction === 'reload' && (
+                <button type="button" className="btn btn--outline btn--sm" onClick={reloadLatest}>
+                  <Icon name="refresh" size={16} /> {t('admin.productForm.reload')}
+                </button>
+              )}
+              {errorAction === 'list' && (
+                <button
+                  type="button"
+                  className="btn btn--outline btn--sm"
+                  onClick={() => {
+                    setInitial(JSON.stringify(form)); // товара нет — вопрос о несохранённых изменениях не нужен
+                    navigate(listPath, { replace: true });
+                  }}
+                >
+                  <Icon name="arrowLeft" size={16} /> {t('admin.productForm.back')}
+                </button>
+              )}
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setVisibilityError(null)}
+                aria-label={t('admin.products.closeMessage')}
+                title={t('admin.products.closeMessage')}
+              >
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  // Раздел «Удаление товара»: кнопка доступна только для скрытого товара, иначе — объяснение
+  const renderDeleteSection = () => {
+    const blocked = deleteBlockReason(loaded.product, null);
+    return (
+      <section className="admin-product-delete" aria-labelledby="product-delete-heading">
+        <div>
+          <h2 id="product-delete-heading">{t('admin.productDelete.sectionTitle')}</h2>
+          <p id="product-delete-hint">
+            {blocked ? t('admin.productDelete.blockedNotHidden') : t('admin.productDelete.sectionText')}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn btn--outline admin-product-delete__btn"
+          onClick={openDelete}
+          disabled={Boolean(blocked) || saving || deleting || toggling}
+          aria-describedby="product-delete-hint"
+        >
+          <Icon name="trash" size={16} /> {t('admin.productDelete.open')}
+        </button>
+      </section>
+    );
+  };
+
   return (
     <>
       {back}
@@ -208,11 +401,7 @@ export default function AdminProductFormPage() {
         <p>{isEdit ? t('admin.productForm.subtitleEdit', { id: routeId }) : t('admin.productForm.subtitleNew')}</p>
       </div>
 
-      {isEdit && loaded.product?.hidden && (
-        <p className="admin-product-form__notice">
-          <Icon name="info" size={16} /> {t('admin.productForm.hiddenNote')}
-        </p>
-      )}
+      {isEdit && renderVisibilitySection()}
       {isEdit && loaded.damaged && (
         <p className="admin-product-form__notice admin-product-form__notice--warning">
           <Icon name="alert" size={16} /> {t('admin.productForm.damagedNote')}
@@ -250,6 +439,24 @@ export default function AdminProductFormPage() {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
       />
+
+      {isEdit && renderDeleteSection()}
+      {deleteOpen && (
+        <DeleteProductDialog
+          product={{ id: routeId, name: loaded.product?.name, brand: loaded.product?.brand }}
+          raw={loaded.raw}
+          dirty={dirty}
+          deleting={deleting}
+          error={deleteError}
+          onConfirm={handleDelete}
+          onCancel={closeDelete}
+          onReload={reloadLatest}
+          onBackToList={() => {
+            setInitial(JSON.stringify(form)); // товара нет — вопрос о несохранённых изменениях не нужен
+            navigate(listPath, { replace: true });
+          }}
+        />
+      )}
     </>
   );
 }

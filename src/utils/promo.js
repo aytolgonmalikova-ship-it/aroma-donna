@@ -1,5 +1,5 @@
 // Расчёт скидки по ДЕМОНСТРАЦИОННЫМ промокодам и стоимости доставки.
-import { PROMO_CODES } from '../data/promoCodes';
+import { PROMO_CODES } from '../data/promoCodes.js';
 
 export const DELIVERY_METHODS = {
   courier: { price: 300, freeFrom: 7000 }, // курьер по Бишкеку

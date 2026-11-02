@@ -4,7 +4,9 @@
 
 /**
  * Коды: not-configured, network, denied, failed, not-empty, invalid,
- * id-taken (товар с таким id уже есть), not-found (товара нет), conflict (товар изменили после открытия формы).
+ * id-taken (товар с таким id уже есть), not-found (товара нет), conflict (товар изменили после открытия формы),
+ * damaged (документ повреждён — сначала исправить в форме), not-hidden (удалить можно только скрытый товар),
+ * last-visible (на витрине не останется видимых товаров — покупатели увидели бы демо-каталог).
  */
 export class AdminError extends Error {
   constructor(code, cause) {

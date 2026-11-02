@@ -11,13 +11,17 @@ import AvailabilityBadge from '../../components/products/AvailabilityBadge';
 import { CATEGORIES, FAMILIES, products as demoProducts } from '../../data/products';
 import { fetchProducts, selectProducts, selectProductsSource, selectProductsStatus } from '../../features/products/productsSlice';
 import { notify } from '../../features/notifications/notificationsSlice';
-import { fetchAllProducts, importDemoCatalog } from '../../services/adminService';
+import { fetchAllProducts, fetchProductForEdit, importDemoCatalog, setProductHidden } from '../../services/adminService';
 import { AVAILABILITIES } from '../../utils/products';
 import {
   DEFAULT_PRODUCT_FILTERS,
   PRODUCT_SORTS,
+  PRODUCT_VISIBILITIES,
+  applyFetchedProduct,
   countActiveProductFilters,
+  countProductVisibility,
   filterAdminProducts,
+  hideBlockReason,
   parseProductListParams,
   sortAdminProducts,
   toProductListParams,
@@ -29,13 +33,18 @@ const editPath = (id) => `/admin/products/${id}/edit`;
 
 /**
  * Раздел «Товары» (этап 5б): все товары из Firestore, включая скрытые, с поиском,
- * фильтрами и сортировкой. Параметры хранятся в адресе (?q=&gender=&family=&stock=&sort=),
+ * фильтрами и сортировкой. Параметры хранятся в адресе (?q=&gender=&family=&stock=&visibility=&sort=),
  * поэтому сохраняются после «Назад» из формы товара. Фильтрация — в браузере: индексы не нужны.
  *
  * Блок импорта демо-каталога (этап 5а) показывается, только когда коллекция products пуста.
  * Пока каталог не импортирован, создавать товары нельзя: первый же товар переключил бы витрину
  * с резервного каталога на Firestore, и покупатели увидели бы только его.
- * Скрытие и удаление товаров — этап 5в.
+ *
+ * Скрытие и возвращение на витрину (этап 5в): кнопка в строке вызывает setProductHidden с датой
+ * updatedAt этой строки. После ответа строка перечитывается из Firestore — так у неё новая дата,
+ * и следующее действие не получит conflict. Одновременно выполняется только одно действие.
+ * Последний видимый товар скрыть нельзя: иначе витрина показала бы демо-каталог.
+ * Окончательное удаление — на странице редактирования (подэтап 5в.4).
  */
 export default function AdminProductsPage() {
   const { t, i18n } = useTranslation();
@@ -48,6 +57,8 @@ export default function AdminProductsPage() {
   const [error, setError] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(null);
+  const [busyId, setBusyId] = useState(null); // id товара, видимость которого сейчас меняется
+  const [actionError, setActionError] = useState(null); // { name, code } — ошибка скрытия или показа
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => parseProductListParams(searchParams), [searchParams]);
   useDocumentTitle(`${t('admin.nav.products')} — ${t('admin.title')}`);
@@ -75,9 +86,9 @@ export default function AdminProductsPage() {
     [data, filters, lang],
   );
 
-  const total = data ? data.products.length + data.invalidIds.length : null;
+  const counts = useMemo(() => countProductVisibility(data), [data]);
+  const total = data ? counts.total : null;
   const collectionEmpty = total === 0;
-  const hiddenCount = data ? data.products.filter((p) => p.hidden).length : 0;
   const hasFilters = countActiveProductFilters(filters) > 0 || filters.q.trim() !== '';
   const canAdd = Boolean(data) && !collectionEmpty;
   // Форма вернёт к списку с теми же поиском и фильтрами
@@ -102,6 +113,76 @@ export default function AdminProductsPage() {
     }
   };
 
+  /**
+   * Перечитать одну строку из Firestore. false — не удалось (например, нет сети):
+   * тогда вызывающий перезагружает весь список, чтобы в строке не осталась старая дата.
+   */
+  const refreshRow = async (id) => {
+    try {
+      const fetched = await fetchProductForEdit(id);
+      setData((d) => applyFetchedProduct(d, id, fetched));
+      return true;
+    } catch (err) {
+      if (err.code !== 'not-found') return false;
+      setData((d) => applyFetchedProduct(d, id, null));
+      return true;
+    }
+  };
+
+  const handleToggleHidden = async (product) => {
+    if (busyId) return;
+    const hidden = !product.hidden;
+    setBusyId(product.id);
+    setActionError(null);
+    try {
+      await setProductHidden(product.id, hidden, product.updatedAt);
+      if (!(await refreshRow(product.id))) load();
+      dispatch(
+        notify({
+          message: hidden ? 'admin.products.hiddenDone' : 'admin.products.shownDone',
+          params: { name: product.name },
+        }),
+      );
+      // Витрина в этой вкладке сразу видит изменение
+      dispatch(fetchProducts());
+    } catch (err) {
+      const code = err.code || 'failed';
+      setActionError({ name: product.name, code });
+      if (code === 'last-visible') {
+        // Сервер знает больше, чем список (другой товар скрыли в другом окне) — перечитываем всё
+        load();
+      } else if (code === 'conflict' || code === 'damaged' || code === 'not-found') {
+        // Показываем актуальное состояние строки: новая дата, повреждён или удалён
+        if (!(await refreshRow(product.id))) load();
+      }
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // «Скрыть» или «Показать». Пока выполняется любое действие, все такие кнопки заблокированы;
+  // последний видимый товар скрыть нельзя — кнопка заблокирована с объяснением
+  const renderVisibilityButton = (p) => {
+    const busy = busyId === p.id;
+    const blocked = hideBlockReason(p, counts);
+    const action = p.hidden ? 'show' : 'hide';
+    const label = busy ? t(`admin.products.visibilityBusy.${action}`) : t(`admin.products.visibilityAction.${action}`);
+    const blockedText = blocked ? t('admin.products.lastVisibleHint') : undefined;
+    return (
+      <button
+        type="button"
+        className={`btn btn--sm ${p.hidden ? 'btn--primary' : 'btn--ghost'}`}
+        onClick={() => handleToggleHidden(p)}
+        disabled={Boolean(busyId) || Boolean(blocked)}
+        aria-busy={busy || undefined}
+        aria-label={`${t(`admin.products.visibilityAction.${action}`)}: ${p.name}${blockedText ? `. ${blockedText}` : ''}`}
+        title={blockedText}
+      >
+        {label}
+      </button>
+    );
+  };
+
   const sourceText =
     storefrontStatus === 'failed'
       ? t('admin.products.source.failed')
@@ -109,11 +190,11 @@ export default function AdminProductsPage() {
         ? t(`admin.products.source.${source}`, { count: storefront.length })
         : '…';
 
-  const select = (key, label, values, optionLabel) => (
+  const select = (key, label, values, optionLabel, allLabel = t('admin.products.all')) => (
     <label className="admin-toolbar__sort">
       <span>{label}</span>
       <select className="field__control" value={filters[key]} onChange={(e) => setFilters({ [key]: e.target.value })}>
-        {key !== 'sort' && <option value="">{t('admin.products.all')}</option>}
+        {key !== 'sort' && <option value="">{allLabel}</option>}
         {values.map((v) => (
           <option key={v} value={v}>
             {optionLabel(v)}
@@ -131,7 +212,15 @@ export default function AdminProductsPage() {
           <p>{t('admin.products.subtitle')}</p>
         </div>
         <div className="admin-page__actions">
-          <button type="button" className="btn btn--outline btn--sm" onClick={load} disabled={!data && !error}>
+          <button
+            type="button"
+            className="btn btn--outline btn--sm"
+            onClick={() => {
+              setActionError(null);
+              load();
+            }}
+            disabled={(!data && !error) || Boolean(busyId)}
+          >
             <Icon name="refresh" size={16} /> {t('admin.products.refresh')}
           </button>
           {canAdd ? (
@@ -157,13 +246,50 @@ export default function AdminProductsPage() {
           <dd>{sourceText}</dd>
         </div>
         <div>
-          <dt>{t('admin.products.inFirestore')}</dt>
-          <dd>
-            {total === null ? (error ? '—' : '…') : total}
-            {hiddenCount > 0 && <small> · {t('admin.products.hiddenCount', { count: hiddenCount })}</small>}
-          </dd>
+          <dt>{t('admin.products.summary.total')}</dt>
+          <dd>{total === null ? (error ? '—' : '…') : total}</dd>
         </div>
+        {data && (
+          <>
+            <div>
+              <dt>{t('admin.products.summary.visible')}</dt>
+              <dd>{counts.visible}</dd>
+            </div>
+            <div>
+              <dt>{t('admin.products.summary.hidden')}</dt>
+              <dd>{counts.hidden}</dd>
+            </div>
+            {counts.damaged > 0 && (
+              <div>
+                <dt>{t('admin.products.summary.damaged')}</dt>
+                <dd className="admin-products__damaged-count">{counts.damaged}</dd>
+              </div>
+            )}
+          </>
+        )}
       </dl>
+      {data && counts.visible === 1 && <p className="admin-muted">{t('admin.products.lastVisibleHint')}</p>}
+
+      {actionError && (
+        <div className="admin-products__action-error" role="alert">
+          <Icon name="alert" size={18} />
+          <p>
+            {t(`admin.products.visibilityErrors.${actionError.code}`, {
+              name: actionError.name,
+              defaultValue: t('admin.products.visibilityErrors.failed', { name: actionError.name }),
+            })}
+          </p>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setActionError(null)}
+            aria-label={t('admin.products.closeMessage')}
+            title={t('admin.products.closeMessage')}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+      )}
 
       {error && <ErrorMessage message={t(`admin.products.errors.${error}`, t('admin.products.errors.failed'))} onRetry={load} />}
       {!error && !data && <LoadingSpinner />}
@@ -219,6 +345,13 @@ export default function AdminProductsPage() {
             {select('gender', t('admin.products.filterGender'), CATEGORIES, (v) => t(`categories.${v}`))}
             {select('family', t('admin.products.filterFamily'), FAMILIES, (v) => t(`families.${v}`))}
             {select('stock', t('admin.products.filterStock'), AVAILABILITIES, (v) => t(`availability.${v}`))}
+            {select(
+              'visibility',
+              t('admin.products.filterVisibility'),
+              PRODUCT_VISIBILITIES,
+              (v) => t(`admin.products.visibility.${v}`),
+              t('admin.products.visibility.all'),
+            )}
             {select('sort', t('admin.products.sortLabel'), PRODUCT_SORTS, (v) => t(`admin.products.sort.${v}`))}
             {hasFilters && (
               <button type="button" className="btn btn--ghost btn--sm" onClick={resetFilters}>
@@ -299,14 +432,17 @@ export default function AdminProductsPage() {
                       </td>
                       <td data-label={t('admin.products.col.updated')}>{p.updatedAt ? formatDate(p.updatedAt, lang) : '—'}</td>
                       <td data-label={t('admin.products.col.actions')}>
-                        <Link
-                          to={editPath(p.id)}
-                          state={linkState}
-                          className="btn btn--outline btn--sm"
-                          aria-label={t('admin.products.editLabel', { name: p.name })}
-                        >
-                          {t('admin.products.edit')}
-                        </Link>
+                        <div className="admin-products__actions">
+                          <Link
+                            to={editPath(p.id)}
+                            state={linkState}
+                            className="btn btn--outline btn--sm"
+                            aria-label={t('admin.products.editLabel', { name: p.name })}
+                          >
+                            {t('admin.products.edit')}
+                          </Link>
+                          {renderVisibilityButton(p)}
+                        </div>
                       </td>
                     </tr>
                   ))}

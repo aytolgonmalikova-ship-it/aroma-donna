@@ -110,6 +110,8 @@ export default cartSlice.reducer;
 
 const selectCartState = (state) => state.cart;
 const selectRawItems = (state) => state.cart.items;
+/** Записи корзины как есть ({ key, id, volume, quantity }) — для проверки перед оформлением заказа */
+export const selectCartEntries = selectRawItems;
 const selectCatalog = (state) => state.products.items;
 const selectCatalogLoaded = (state) => state.products.status === 'succeeded';
 

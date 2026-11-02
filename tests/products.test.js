@@ -101,6 +101,16 @@ test('toCatalogProduct: документ Firestore → товар витрины
   });
 });
 
+test('toCatalogProduct: hidden как у витрины — видимым считается только hidden === false', () => {
+  const doc = asStored(toFirestoreProduct(products[0]));
+  assert.equal(toCatalogProduct(doc.id, { ...doc, hidden: false }).hidden, false);
+  assert.equal(toCatalogProduct(doc.id, { ...doc, hidden: true }).hidden, true);
+  // Нет поля или не логическое значение — запрос витрины (hidden == false) такой документ не вернёт
+  const { hidden: _omit, ...noHidden } = doc;
+  assert.equal(toCatalogProduct(doc.id, noHidden).hidden, true);
+  assert.equal(toCatalogProduct(doc.id, { ...doc, hidden: 'false' }).hidden, true);
+});
+
 test('toCatalogProduct: объёмы сортируются, price и volume — по минимальному, мусор отбрасывается', () => {
   const item = toCatalogProduct('x', {
     ...sample(),
@@ -150,7 +160,9 @@ const listIn = (text, marker) => {
 test('правила products: публично — только видимые, запись — только админ с проверкой формата', () => {
   assert.match(productsBlock, /allow read: if isAdmin\(\) \|\| resource\.data\.hidden == false;/);
   assert.match(productsBlock, /allow create, update: if isAdmin\(\) && isValidProduct\(request\.resource\.data, productId\);/);
-  assert.match(productsBlock, /allow delete: if isAdmin\(\);/);
+  // Удаление — только админ и только скрытого товара (этап 5c.8)
+  assert.match(productsBlock, /allow delete: if isAdmin\(\) && resource\.data\.hidden == true;/);
+  assert.doesNotMatch(productsBlock, /allow delete: if isAdmin\(\);/);
   assert.equal((productsBlock.match(/allow /g) || []).length, 3, 'других разрешений для products нет');
   assert.match(productsBlock, /p\.updatedAt == request\.time/);
   assert.match(productsBlock, /p\.id == productId/);

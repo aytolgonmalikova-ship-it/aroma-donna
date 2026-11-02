@@ -316,7 +316,26 @@
     "cashNote": "Pay in cash when you receive the order. The order will get the “Awaiting payment” status.",
     "cardDemoNote": "Demo payment: after you fill in your details a bank card window will open. No money is charged; card details are never stored or sent anywhere.",
     "demoPay": "Demo payment",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "review": {
+      "blockedTitle": "Some items are no longer available",
+      "blockedText": "Your order was not placed: the catalog changed while you were checking out. Remove these items from your cart, choose another size or go back to the catalog.",
+      "confirmTitle": "Prices have changed",
+      "confirmText": "Prices in the catalog were updated while you were checking out. Your order has not been placed yet — please review the current prices and confirm your order again.",
+      "problem": {
+        "missing": "No longer sold",
+        "outOfStock": "Out of stock",
+        "volumeUnavailable": "The {{volume}} ml size is no longer sold — choose another one in your cart"
+      },
+      "oldPrice": "Was: {{price}}",
+      "newPrice": "Now: {{price}}",
+      "newTotal": "New amount to pay:",
+      "cardNote": "The card payment window will open again with the new amount.",
+      "removeProblems": "Remove unavailable items from cart",
+      "chooseVolume": "Choose another size in cart",
+      "confirmNew": "Confirm order at new prices",
+      "verifyError": "We couldn’t check that the items are still up to date. Your order was not placed — check your connection and try again."
+    }
   },
   "delivery": {
     "title": "Delivery & payment",
@@ -837,7 +856,6 @@
       "refresh": "Refresh",
       "catalogTitle": "Catalog",
       "storefront": "Shop is showing",
-      "inFirestore": "Products in Firestore (including hidden)",
       "source": {
         "firestore": "Firestore — visible products: {{count}}",
         "fallback": "Fallback catalog from file ({{count}} products) — the products collection is empty",
@@ -876,7 +894,6 @@
       },
       "reset": "Reset",
       "found": "Showing {{count}} of {{total}}",
-      "hiddenCount": "hidden: {{count}}",
       "col": {
         "photo": "Photo",
         "name": "Name",
@@ -889,14 +906,119 @@
         "actions": "Actions"
       },
       "hidden": "Hidden",
-      "hiddenHint": "Not shown in the store. Hiding controls will arrive in stage 5c.",
+      "hiddenHint": "Not shown in the store. Click “Show” to make it available to customers again.",
       "edit": "Edit",
       "editLabel": "Edit: {{name}}",
       "empty": "There are no products in Firestore yet",
       "emptyFiltered": "Nothing found",
       "emptyFilteredText": "Change the search or reset the filters.",
       "damagedTitle": "Damaged documents: {{count}}",
-      "damagedText": "These documents fail the format check and are not shown in the store. Open a document to fix it."
+      "damagedText": "These documents fail the format check and are not shown in the store. Open a document to fix it.",
+      "summary": {
+        "total": "Total products",
+        "visible": "In the store",
+        "hidden": "Hidden",
+        "damaged": "Damaged documents"
+      },
+      "filterVisibility": "Visibility",
+      "visibility": {
+        "all": "All products",
+        "visible": "In the store",
+        "hidden": "Hidden"
+      },
+      "visibilityAction": {
+        "hide": "Hide",
+        "show": "Show"
+      },
+      "visibilityBusy": {
+        "hide": "Hiding…",
+        "show": "Showing…"
+      },
+      "hiddenDone": "“{{name}}” is hidden from the store. Its data stays in Firestore.",
+      "shownDone": "“{{name}}” is back in the store.",
+      "lastVisibleHint": "Only one product is left in the store — it can’t be hidden, otherwise customers would see the demo catalog instead of yours. Show another product first.",
+      "closeMessage": "Close message",
+      "visibilityErrors": {
+        "conflict": "“{{name}}” was changed in another window. The row has been refreshed — check the data and try again.",
+        "not-found": "“{{name}}” was not found — it may have been deleted. It has been removed from the list.",
+        "damaged": "The “{{name}}” document is damaged, so its visibility can’t be changed. Open the product and fix the errors.",
+        "last-visible": "“{{name}}” can’t be hidden: it is the last product in the store, and customers would see the demo catalog. The list has been refreshed.",
+        "denied": "You don’t have permission to change “{{name}}”. Sign in to the admin panel again.",
+        "network": "No internet connection. The visibility of “{{name}}” was not changed.",
+        "not-configured": "Firebase is not connected.",
+        "invalid": "Couldn’t change the visibility of “{{name}}”. Please try again.",
+        "failed": "Couldn’t change the visibility of “{{name}}”. Please try again."
+      }
+    },
+    "productDelete": {
+      "sectionTitle": "Delete product",
+      "sectionText": "This product is hidden and can be permanently deleted from Firestore. You need to download a JSON backup first.",
+      "blockedNotHidden": "Only hidden products can be deleted. Hide it first in the “Store visibility” section above.",
+      "open": "Delete product…",
+      "title": "Delete this product permanently?",
+      "text": "The document will be removed from Firestore. This cannot be undone — the product can only be restored manually from the JSON backup.",
+      "name": "Name",
+      "brand": "Brand",
+      "id": "ID",
+      "factOrders": "Order history and customer data will not change: orders keep the product name, brand, size and price.",
+      "factCarts": "The product will be removed from customers’ carts and favorites the next time they open the site. It can’t be ordered: the catalog is checked again right before checkout.",
+      "factUnsaved": "Unsaved changes in the form will be lost.",
+      "stepBackup": "Download a JSON backup of the product.",
+      "download": "Download JSON backup",
+      "downloadAgain": "Download again",
+      "downloaded": "Backup downloaded: {{file}}",
+      "stepConfirm": "To confirm, type the product ID:",
+      "idHint": "Type the ID exactly as shown — it is case-sensitive.",
+      "idMismatch": "The ID does not match.",
+      "needBackup": "Download the JSON backup first to delete the product.",
+      "needId": "Type the exact product ID to enable the delete button.",
+      "cancel": "Cancel",
+      "confirm": "Delete permanently",
+      "deleting": "Deleting…",
+      "done": "“{{name}}” was permanently deleted. Orders containing it were not changed.",
+      "errors": {
+        "conflict": "The product was changed in another tab or by another admin after this page was opened. Nothing was deleted. Load the latest version and check the data.",
+        "not-hidden": "The product is visible in the store again — visible products cannot be deleted. Nothing was deleted. Load the latest version.",
+        "not-found": "The product is no longer in Firestore — it may have been deleted in another window.",
+        "last-visible": "There are no visible products in the store right now. Deletion was cancelled so customers do not see the demo catalog. Show at least one product first.",
+        "denied": "You do not have permission to delete products. Sign in to the admin panel again.",
+        "network": "No internet connection. The product was not deleted — check your connection and try again.",
+        "not-configured": "Firebase is not connected.",
+        "failed": "Could not delete the product. Please try again."
+      }
+    },
+    "productVisibility": {
+      "sectionTitle": "Store visibility",
+      "status": {
+        "visible": "In the store",
+        "hidden": "Hidden",
+        "damaged": "Not shown"
+      },
+      "text": {
+        "visible": "Customers see this product in the catalog and can order it. Hiding does not delete any data or change orders.",
+        "hidden": "Customers don’t see this product in the catalog. Its data is kept in Firestore, and saving the form doesn’t change visibility. Orders with this product are unchanged.",
+        "damaged": "The document is damaged, so the store doesn’t show it. Fix the fields and save the product — then you can manage its visibility."
+      },
+      "dirtyHint": "The form has unsaved changes. Save or discard them first — then you can change visibility.",
+      "action": {
+        "hide": "Hide from store",
+        "show": "Show in store"
+      },
+      "busy": {
+        "hide": "Hiding…",
+        "show": "Showing…"
+      },
+      "errors": {
+        "conflict": "This product was changed in another tab or by another admin after the page was opened. Visibility was not changed. Load the latest version and try again.",
+        "not-found": "This product no longer exists in Firestore — it may have been deleted in another tab. Go back to the product list.",
+        "damaged": "The product document is damaged, so its visibility can’t be changed. Load the latest version, fix the fields and save the product.",
+        "last-visible": "You can’t hide the last product in the store: customers would see the demo catalog instead of yours. Show another product first.",
+        "denied": "You don’t have permission to change this product. Sign in to the admin panel again.",
+        "network": "No internet connection. Visibility was not changed — check your connection and try again.",
+        "not-configured": "Firebase is not connected.",
+        "invalid": "Couldn’t change the product’s visibility. Please try again.",
+        "failed": "Couldn’t change the product’s visibility. Please try again."
+      }
     },
     "productForm": {
       "titleNew": "New product",
@@ -944,7 +1066,6 @@
       "confirmLeave": "You have unsaved changes. Leave without saving?",
       "created": "Product “{{name}}” created",
       "saved": "Changes to “{{name}}” saved",
-      "hiddenNote": "This product is hidden in the store and will stay hidden after saving. Hiding controls will arrive in stage 5c.",
       "damagedNote": "This document is damaged and not shown in the store. Fill in the missing fields and save to make the product valid again.",
       "errorsSummary": "Check the form: fields with errors — {{count}}.",
       "reload": "Load the latest version",

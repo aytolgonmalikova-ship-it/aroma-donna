@@ -1199,6 +1199,86 @@
   color: var(--text-muted);
   font-size: 0.92rem;
 }
+
+/* Проверка корзины перед оформлением: товары недоступны или изменились цены */
+.checkout-review {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  background: var(--warning-bg);
+  color: var(--text);
+}
+.checkout-review--blocked {
+  border-color: var(--error);
+  background: var(--error-bg);
+}
+.checkout-review__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--warning);
+}
+.checkout-review--blocked .checkout-review__title {
+  color: var(--error);
+}
+.checkout-review p {
+  margin: 0;
+}
+.checkout-review__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.checkout-review__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.checkout-review__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.checkout-review__name small {
+  display: block;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.checkout-review__reason {
+  color: var(--error);
+  font-size: 0.92rem;
+}
+.checkout-review__price s {
+  color: var(--text-muted);
+}
+.checkout-review__note {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.checkout-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .checkout-review {
+    padding: 14px;
+  }
+  .checkout-review__actions .btn {
+    flex: 1 1 100%;
+  }
+}
 .success__card {
   max-width: 680px;
   margin: 0 auto;

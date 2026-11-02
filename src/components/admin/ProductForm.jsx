@@ -11,7 +11,7 @@ const LANG_NAMES = { ru: 'Русский', ky: 'Кыргызча', en: 'English'
 /**
  * Форма товара (создание и редактирование). Только отображение: значения, ошибки и предупреждения
  * приходят из AdminProductFormPage, изменения уходят через onChange(field, value).
- * Поля hidden в форме нет: скрытие товара — этап 5в, при сохранении hidden берётся из Firestore.
+ * Поля hidden в форме нет: видимость переключается отдельным блоком страницы, при сохранении hidden берётся из Firestore.
  */
 export default function ProductForm({ form, errors, warnings, isEdit, saving, onChange, onSubmit, onCancel }) {
   const { t } = useTranslation();

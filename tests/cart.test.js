@@ -159,7 +159,7 @@ test('оформление заказа блокируется, пока в ко
   assert.match(summary, /selectCartHasUnavailable/);
   assert.match(summary, /showCheckout && !hasUnavailable && \(\s*<Link to="\/checkout"/);
   const checkout = read('src/pages/CheckoutPage.jsx');
-  assert.match(checkout, /if \(hasUnavailable && !submittedRef\.current\)/);
-  // Защита и в самой отправке заказа
-  assert.match(checkout, /const placeOrder = async[^]*?if \(hasUnavailable \|\| items\.some\(\(i\) => !i\.volumeAvailable\)\)/);
+  assert.match(checkout, /if \(hasUnavailable && !submittedRef\.current && !review\)/);
+  // Защита и в самой отправке заказа: свежая проверка каталога (volumeUnavailable → blocked)
+  assert.match(checkout, /const placeOrder = async[^]*?const result = checked \|\| \(await verifyCart\(values\)\)/);
 });

@@ -232,7 +232,7 @@ export async function importDemoCatalog(products) {
 
 // ---------- Управление товарами (этап 5б) ----------
 // Логика и транзакции — в adminProductsStore.js (проверяется тестами на модели Firestore),
-// здесь — подключение Firebase и единые коды ошибок. Скрытие и удаление — этап 5в.
+// здесь — подключение Firebase и единые коды ошибок. Скрытие и удаление — этап 5в (ниже).
 
 /** Вызвать функцию adminProductsStore с подключённым Firebase */
 async function withFirebase(fn, ...args) {
@@ -255,3 +255,15 @@ export const createProduct = (data) => withFirebase(productsStore.createProduct,
 /** Изменение: id и hidden сохраняются; изменён после открытия формы — 'conflict'; удалён — 'not-found' */
 export const updateProduct = (id, data, loadedUpdatedAt) =>
   withFirebase(productsStore.updateProduct, id, data, loadedUpdatedAt);
+
+// ---------- Скрытие и удаление товаров (этап 5в) ----------
+
+/**
+ * Скрыть (true) или вернуть на витрину (false): меняются только hidden и updatedAt.
+ * Ошибки: not-found, conflict, damaged, last-visible (последний видимый товар скрыть нельзя).
+ */
+export const setProductHidden = (id, hidden, loadedUpdatedAt) =>
+  withFirebase(productsStore.setProductHidden, id, hidden, loadedUpdatedAt);
+
+/** Окончательное удаление только скрытого товара. Ошибки: not-found, conflict, not-hidden, last-visible */
+export const deleteProduct = (id, loadedUpdatedAt) => withFirebase(productsStore.deleteProduct, id, loadedUpdatedAt);
