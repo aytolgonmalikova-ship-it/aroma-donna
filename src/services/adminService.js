@@ -12,6 +12,7 @@
  */
 import { getFirebase, isFirebaseConfigured } from './firebase';
 import { isOrderStatus } from '../utils/orderStatus';
+import { buildCustomers } from '../utils/customers';
 
 export const isAdminAvailable = isFirebaseConfigured;
 
@@ -125,6 +126,66 @@ export async function updateOrderStatus(userId, orderId, status) {
       status,
       statusUpdatedAt: dbApi.serverTimestamp(),
     });
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+// ---------- Покупатели (этап 4) ----------
+// Профили лежат в users/{uid} (поля name, email, createdAt). Правило
+// `allow read: if isOwner(userId) || isAdmin()` даёт админу только чтение.
+// Статистика (число заказов, сумма, последний заказ) считается из заказов в браузере —
+// см. src/utils/customers.js.
+
+const CUSTOMERS_LIMIT = 1000;
+
+/** Документ users/{uid} → профиль покупателя (дата регистрации — ISO-строка) */
+function toCustomerProfile(snap) {
+  const data = snap.data();
+  return {
+    uid: snap.id,
+    name: typeof data.name === 'string' ? data.name : '',
+    email: typeof data.email === 'string' ? data.email : '',
+    createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
+  };
+}
+
+/** Все покупатели: профили + статистика по их заказам */
+export async function fetchAllCustomers() {
+  try {
+    const { db, dbApi } = await getFirebase();
+    const [usersSnap, orders] = await Promise.all([
+      dbApi.getDocs(dbApi.query(dbApi.collection(db, 'users'), dbApi.limit(CUSTOMERS_LIMIT))),
+      fetchAllOrders(),
+    ]);
+    return buildCustomers(usersSnap.docs.map(toCustomerProfile), orders);
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+/** Один покупатель с его заказами; null — нет ни профиля, ни заказов */
+export async function fetchCustomer(uid) {
+  try {
+    const { db, dbApi } = await getFirebase();
+    const [profileSnap, ordersSnap] = await Promise.all([
+      dbApi.getDoc(dbApi.doc(db, 'users', uid)),
+      // Заказы одного покупателя: сортировка в браузере, отдельный индекс не нужен
+      dbApi.getDocs(dbApi.collection(db, 'users', uid, 'orders')),
+    ]);
+    const profiles = profileSnap.exists() ? [toCustomerProfile(profileSnap)] : [];
+    return buildCustomers(profiles, ordersSnap.docs.map(toAdminOrder))[0] || null;
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+/** Количество зарегистрированных покупателей (профилей users) — агрегатный запрос */
+export async function fetchCustomersCount() {
+  try {
+    const { db, dbApi } = await getFirebase();
+    const snap = await dbApi.getCountFromServer(dbApi.collection(db, 'users'));
+    return snap.data().count;
   } catch (err) {
     throw toAdminError(err);
   }

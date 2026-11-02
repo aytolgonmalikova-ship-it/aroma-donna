@@ -454,3 +454,52 @@
     font-size: 0.82rem;
   }
 }
+
+/* Покупатели: поиск и сортировка над таблицей */
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 18px 0;
+}
+.admin-toolbar__search {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+.admin-toolbar__search svg {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.admin-toolbar__search .field__control {
+  padding-left: 40px;
+}
+.admin-toolbar__sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.admin-toolbar__sort .field__control {
+  width: auto;
+  padding-right: 36px;
+  color: var(--text);
+}
+.admin-toolbar__count {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.admin-note {
+  margin: 0 0 16px;
+}
+.admin-muted--inline {
+  display: block;
+  margin: 2px 0 0;
+}

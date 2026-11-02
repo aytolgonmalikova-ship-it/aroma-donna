@@ -7,7 +7,7 @@ import { ADMIN_SECTIONS } from '../../components/admin/adminSections';
 import { selectProducts, selectProductsStatus } from '../../features/products/productsSlice';
 import { selectUser } from '../../features/user/userSlice';
 import { fetchReviewStats } from '../../services/reviewsService';
-import { fetchOrdersCount } from '../../services/adminService';
+import { fetchCustomersCount, fetchOrdersCount } from '../../services/adminService';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 /** Карточка показателя: значение или «скоро» для разделов, которые ещё не подключены */
@@ -26,9 +26,8 @@ function StatCard({ icon, label, value, hint }) {
 
 /**
  * Главная страница админ-панели (каркас).
- * Показывает число товаров каталога, статистику отзывов (она публичная)
- * и число заказов (доступно администратору по правилам этапа 3).
- * Покупатели появятся на этапе 4.
+ * Показывает число товаров каталога, статистику отзывов (она публичная),
+ * число заказов (правила этапа 3) и зарегистрированных покупателей (правила этапа 4).
  */
 export default function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
@@ -37,6 +36,7 @@ export default function AdminDashboardPage() {
   const productsStatus = useSelector(selectProductsStatus);
   const [reviewStats, setReviewStats] = useState(null); // null — загрузка, false — ошибка
   const [ordersCount, setOrdersCount] = useState(null); // null — загрузка, false — ошибка
+  const [customersCount, setCustomersCount] = useState(null); // null — загрузка, false — ошибка
   useDocumentTitle(t('admin.dashboard.title'));
 
   useEffect(() => {
@@ -47,12 +47,14 @@ export default function AdminDashboardPage() {
     fetchOrdersCount()
       .then((count) => !cancelled && setOrdersCount(count))
       .catch(() => !cancelled && setOrdersCount(false));
+    fetchCustomersCount()
+      .then((count) => !cancelled && setCustomersCount(count))
+      .catch(() => !cancelled && setCustomersCount(false));
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const soon = t('admin.soon');
   const reviewsValue =
     reviewStats === null ? '…' : reviewStats === false ? '—' : reviewStats.count;
   const ratingValue =
@@ -81,7 +83,12 @@ export default function AdminDashboardPage() {
           label={t('admin.dashboard.orders')}
           value={ordersCount === null ? '…' : ordersCount === false ? '—' : ordersCount}
         />
-        <StatCard icon="user" label={t('admin.dashboard.customers')} value={soon} hint={t('admin.stageHint', { stage: 4 })} />
+        <StatCard
+          icon="user"
+          label={t('admin.dashboard.customers')}
+          value={customersCount === null ? '…' : customersCount === false ? '—' : customersCount}
+          hint={t('admin.dashboard.customersHint')}
+        />
       </div>
 
       <section className="admin-panel card">

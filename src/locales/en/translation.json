@@ -741,6 +741,7 @@
       "rating": "Average rating",
       "orders": "Orders",
       "customers": "Customers",
+      "customersHint": "Registered on the site",
       "sections": "Sections"
     },
     "ready": "Ready",
@@ -778,6 +779,49 @@
         "failed": "Could not load data. Please try again.",
         "network": "No internet connection.",
         "denied": "Access denied. Make sure the stage 3 Firestore rules are published and sign in again.",
+        "not-configured": "Firebase is not configured."
+      }
+    },
+    "customers": {
+      "subtitle": "Registered customers and their order statistics. Read only.",
+      "refresh": "Refresh",
+      "searchLabel": "Search customers",
+      "searchPlaceholder": "Name or email",
+      "sortLabel": "Sort",
+      "sort": {
+        "registered": "Newest first",
+        "lastOrder": "By last order",
+        "spent": "By total spent",
+        "orders": "By number of orders",
+        "name": "By name"
+      },
+      "found": "Showing {{count}} of {{total}}",
+      "empty": "No customers yet",
+      "emptySearch": "No one found — try another search",
+      "customer": "Customer",
+      "name": "Name",
+      "noName": "No name",
+      "email": "Email",
+      "phone": "Phone",
+      "phoneHint": "from the latest order",
+      "registered": "Registered",
+      "ordersCount": "Orders",
+      "spent": "Total spent",
+      "spentHint": "Cancelled orders are not included.",
+      "lastOrder": "Last order",
+      "noProfile": "No profile",
+      "noProfileHint": "No users profile found: name and email are taken from the latest order.",
+      "back": "All customers",
+      "notFound": "Customer not found",
+      "profile": "Profile",
+      "uid": "User ID",
+      "stats": "Statistics",
+      "ordersTitle": "Customer orders",
+      "noOrders": "This customer has not placed any orders yet.",
+      "errors": {
+        "failed": "Could not load data. Please try again.",
+        "network": "No internet connection.",
+        "denied": "Access denied. Make sure the stage 4 Firestore rules are published and sign in again.",
         "not-configured": "Firebase is not configured."
       }
     }

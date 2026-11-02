@@ -2,7 +2,8 @@ rules_version = '2';
 
 // Правила безопасности Firestore для AROMA DONNA.
 // Каждый пользователь может читать и изменять ТОЛЬКО свой профиль и свои заказы.
-// Администратор (документ admins/{uid}) может читать все заказы и менять только их статус.
+// Администратор (документ admins/{uid}) может читать профили покупателей и все заказы
+// и менять только статус заказа.
 // Проверка выполняется на стороне сервера Firebase, а не только в интерфейсе.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,7 +19,7 @@ service cloud.firestore {
     // Администратор — тот, у кого есть документ admins/{uid}.
     // Создать такой документ из браузера нельзя (см. правило admins ниже):
     // только вручную в Firebase Console или сервером через Firebase Admin SDK.
-    // Сейчас даёт права только на заказы (этап 3): чтение всех заказов и смену их статуса.
+    // Даёт права: чтение всех заказов и смена их статуса (этап 3), чтение профилей users (этап 4).
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -26,8 +27,10 @@ service cloud.firestore {
     // Профиль пользователя: users/{uid}
     // Разрешены только поля name, email, createdAt — поэтому записать себе роль
     // (role, isAdmin и т.п.) невозможно.
+    // Администратор может только ЧИТАТЬ профили (раздел «Покупатели», этап 4);
+    // создавать, изменять и удалять их он не может.
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
 
       allow create: if isOwner(userId)
                     && request.resource.data.keys().hasOnly(['name', 'email', 'createdAt'])
