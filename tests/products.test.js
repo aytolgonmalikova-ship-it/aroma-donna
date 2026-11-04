@@ -184,8 +184,9 @@ test('прежние правила users, orders, reviews, admins и запре
     'allow update: if isAdmin() && isValidOrderStatusChange();',
     'allow get: if isOwner(adminId);',
     'allow list, create, update, delete: if false;',
+    // reviews — строгие правила модерации (этап D), подробно в tests/reviews.test.js
     'allow create: if isValidReview(request.resource.data);',
-    'allow update, delete: if false;',
+    'allow update: if isAdmin() && isValidReviewModeration();',
   ].forEach((line) => assert.ok(rules.includes(line), line));
   assert.match(rules, /match \/\{document=\*\*\} \{\s*allow read, write: if false;\s*\}/);
 });

@@ -93,19 +93,25 @@ service cloud.firestore {
       allow list, create, update, delete: if false;
     }
 
-    // Отзывы покупателей: reviews/{reviewId}
-    // Читать может любой посетитель. Создавать — любой, но только в строгом формате.
-    // Изменять и удалять из браузера нельзя (удаление спама — вручную в Firebase Console).
+    // Отзывы покупателей: reviews/{reviewId} — модерация (этап D).
+    // Посетитель (в том числе без входа) читает только одобренные отзывы (status == 'approved').
+    // Публичные запросы обязаны содержать фильтр where('status', '==', 'approved') — иначе
+    // Firestore отклонит запрос целиком (правила не фильтруют выдачу).
+    // Создать отзыв может любой посетитель, без входа: строгий формат и только status == 'pending'.
+    // Администратор (isAdmin()) читает отзывы всех статусов, меняет только status и moderatedAt
+    // и навсегда удаляет только отклонённые (status == 'rejected'). Посетитель ничего не меняет и не удаляет.
     match /reviews/{reviewId} {
+      // isAdmin() первым: для несуществующего документа resource == null.
       // (list нужен и для подсчёта средней оценки — getAggregateFromServer)
-      allow read: if true;
+      allow read: if isAdmin() || resource.data.status == 'approved';
       allow create: if isValidReview(request.resource.data);
-      allow update, delete: if false;
+      allow update: if isAdmin() && isValidReviewModeration();
+      allow delete: if isAdmin() && resource.data.status == 'rejected';
     }
 
     function isValidReview(review) {
-      return review.keys().hasOnly(['name', 'rating', 'text', 'lang', 'createdAt'])
-          && review.keys().hasAll(['name', 'rating', 'text', 'createdAt'])
+      return review.keys().hasOnly(['name', 'rating', 'text', 'lang', 'status', 'createdAt'])
+          && review.keys().hasAll(['name', 'rating', 'text', 'status', 'createdAt'])
           && review.name is string
           && review.name.size() >= 2 && review.name.size() <= 50
           && review.rating is int
@@ -113,8 +119,20 @@ service cloud.firestore {
           && review.text is string
           && review.text.size() >= 10 && review.text.size() <= 1000
           && (!('lang' in review) || review.lang in ['ru', 'ky', 'en'])
+          // Новый отзыв — только на модерацию: опубликовать или отклонить может лишь администратор
+          && review.status == 'pending'
           // Время ставит сервер Firebase (serverTimestamp), подделать дату нельзя
           && review.createdAt == request.time;
+    }
+
+    // Модерация: меняются только поля status и moderatedAt, статус — из списка
+    // (тот же список в src/services/reviewsStore.js), время ставит сервер (serverTimestamp).
+    // Имя, оценку, текст, язык и дату создания изменить нельзя.
+    function isValidReviewModeration() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'moderatedAt'])
+          && request.resource.data.status in ['pending', 'approved', 'rejected']
+          && request.resource.data.moderatedAt == request.time;
     }
 
     // Товары каталога: products/{productId}

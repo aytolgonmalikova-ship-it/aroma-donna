@@ -779,9 +779,12 @@ test('adminService: функции товаров подключены, удал
   // создание, изменение, скрытие и удаление — в транзакциях, время — от сервера
   assert.equal(store.match(/runTransaction\(/g).length, 4);
   assert.equal(store.match(/updatedAt: dbApi\.serverTimestamp\(\)/g).length, 3);
-  // firestore.rules зафиксированы после ужесточения правила удаления (подэтап 5в.8)
-  const hash = createHash('sha256').update(read('firestore.rules')).digest('hex');
-  assert.equal(hash, '30832c53c0f8aad016afae7a7c0d2882e05f56eee81af5446c25420e8c18f104');
+  // Правила products зафиксированы после ужесточения правила удаления (подэтап 5в.8).
+  // Хешируется только блок products — правила других коллекций проверяются в своих тестах
+  const rules = read('firestore.rules');
+  const productsRules = rules.slice(rules.indexOf('match /products/{productId}'), rules.indexOf('// Всё остальное закрыто'));
+  const hash = createHash('sha256').update(productsRules).digest('hex');
+  assert.equal(hash, '3814cbafe602e328443bd9bcf0d23b85087c6624c430d8a06fe3d213c70b7837');
 });
 
 // ---------- Демо-каталог не подменяет реальный (подэтап 5в.6) ----------

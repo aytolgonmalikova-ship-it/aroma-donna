@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node --test"
+    "test": "node --test",
+    "test:rules": "npx firebase-tools emulators:exec --only firestore --project demo-aroma-donna \"node --test tests-emulator/firestore.rules.emulator.js\""
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@firebase/rules-unit-testing": "^4.0.1",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.1.0",

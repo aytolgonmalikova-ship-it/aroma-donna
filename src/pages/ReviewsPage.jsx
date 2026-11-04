@@ -47,7 +47,7 @@ export default function ReviewsPage() {
           <h2 id="review-form-title" className="section__title section__title--sm">
             {t('reviews.formTitle')}
           </h2>
-          <ReviewForm onCreated={data.addLocal} />
+          <ReviewForm />
         </section>
       </div>
     </>

@@ -120,6 +120,7 @@ npm run dev
 | `npm run preview` | Показывает собранную версию из `dist` на http://localhost:4173 |
 | `npm run lint` | Проверяет код линтером ESLint |
 | `npm test` | Запускает тесты формы обратной связи, серверной функции и проверки отзывов (`tests/`) |
+| `npm run test:rules` | Проверяет `firestore.rules` на локальном Firebase Emulator (`tests-emulator/`, нужна Java 21+) |
 
 ---
 
@@ -220,6 +221,7 @@ Aroma-Donna/
 │   ├── contact.js          # Vercel Function POST /api/contact — отправка в Telegram
 │   └── _lib/contactHandler.js  # её логика: проверка, лимит запросов, вызов Telegram Bot API
 ├── tests/                  # тесты (npm test)
+├── tests-emulator/         # тесты firestore.rules на Firebase Emulator (npm run test:rules)
 ├── public/
 │   ├── favicon.svg
 │   └── images/products/    # 24 SVG-флакона + placeholder.svg (заглушка)
@@ -416,31 +418,44 @@ Aroma-Donna/
 
 ### Отзывы покупателей (Firestore)
 
-Страница `/reviews` и блок на главной показывают **только настоящие отзывы** из коллекции `reviews`.
+Страница `/reviews` и блок на главной показывают **только настоящие одобренные отзывы** (`status: 'approved'`)
+из коллекции `reviews`. Новый отзыв уходит на модерацию (`status: 'pending'`) и появляется после одобрения.
 Пока отзывов нет — показывается приглашение оставить первый.
 
 **Как устроено:**
 
 | Файл | Что делает |
 |---|---|
-| `src/services/reviewsService.js` | Загрузка (новые сверху, по 9 штук, «Показать ещё»), средняя оценка и число отзывов (`getAggregateFromServer`), добавление отзыва |
-| `src/hooks/useReviews.js` | Состояния загрузки, ошибки, пустого списка; новый отзыв сразу появляется в списке |
+| `src/services/reviewsStore.js` | Запросы к Firestore: одобренные отзывы (новые сверху, по 9 штук, «Показать ещё»), число и средняя оценка только по одобренным (`getAggregateFromServer`), новый отзыв со статусом `pending` |
+| `src/services/reviewsService.js` | Подключение Firebase, понятные ошибки, «не чаще одного отзыва в минуту» |
+| `src/hooks/useReviews.js` | Состояния загрузки, ошибки, пустого списка; отправленный отзыв в список не добавляется — он ждёт модерации |
 | `src/components/reviews/*` | Карточка, список, форма, выбор звёзд |
 | `src/utils/validation.js` → `validateReview` | Проверка в браузере: имя 2–50 символов, оценка — целое 1–5, текст 10–1000 символов |
-| `firestore.rules` → `match /reviews/{reviewId}` | **Та же проверка на сервере Firebase** |
+| `firestore.rules` → `match /reviews/{reviewId}` | **Та же проверка на сервере Firebase** и права модерации |
+| `tests-emulator/firestore.rules.emulator.js` | Тесты правил на локальном Firebase Emulator (`npm run test:rules`) |
 
-Документ отзыва: `{ name, rating, text, lang, createdAt }`. Дату ставит сервер (`serverTimestamp()`).
+Документ отзыва: `{ name, rating, text, lang, status, createdAt }`. Дату ставит сервер (`serverTimestamp()`),
+новый отзыв всегда `status: 'pending'`; при модерации добавляется `moderatedAt` (см. `docs/ADMIN_SETUP.md`, разделы 8–10).
 E-mail и другие личные данные не собираются — имя публикуется, о чём сказано под полем.
 
-**Правила доступа к отзывам** (уже в `firestore.rules`):
+**Правила доступа к отзывам** (`firestore.rules`, модерация — этап D):
 
 ```
 match /reviews/{reviewId} {
-  allow read: if true;                     // читать может любой посетитель
-  allow create: if isValidReview(request.resource.data);
-  allow update, delete: if false;          // из браузера нельзя изменить или удалить ни один отзыв
+  allow read: if isAdmin() || resource.data.status == 'approved';     // посетитель — только одобренные
+  allow create: if isValidReview(request.resource.data);              // любой, без входа; только 'pending'
+  allow update: if isAdmin() && isValidReviewModeration();            // только status и moderatedAt
+  allow delete: if isAdmin() && resource.data.status == 'rejected';   // только отклонённые
 }
 ```
+
+| Кто | Читать | Создать | Изменить | Удалить |
+|---|---|---|---|---|
+| Гость, покупатель, анонимный вход | только `approved` (и по ID) | да, только `status: 'pending'` | нет | нет |
+| Администратор (`admins/{uid}`) | все статусы | да, только `status: 'pending'` | только `status` (`pending`/`approved`/`rejected`) и `moderatedAt == request.time` | только `rejected` |
+
+Правила не фильтруют выдачу: публичный запрос обязан содержать `where('status', '==', 'approved')`,
+иначе Firestore отклонит его целиком. Так устроены все запросы сайта (`reviewsStore.js`).
 
 `isValidReview` пропускает отзыв, только если:
 
@@ -448,6 +463,8 @@ match /reviews/{reviewId} {
 - `name` — строка 2–50 символов, `text` — строка 10–1000 символов;
 - `rating` — **целое число** от 1 до 5 (строку `"5"` или `4.5` сервер отклонит);
 - `lang` — `ru`, `ky` или `en` (если указан);
+- `status` — **обязателен** и равен `pending` (сразу `approved` или `rejected` отправить нельзя);
+- поля `moderatedAt` при создании нет — его ставит только администратор при модерации;
 - `createdAt == request.time` — дату нельзя подделать.
 
 Почему так безопасно:
@@ -458,20 +475,25 @@ match /reviews/{reviewId} {
   с ними любой может стереть или подменить все отзывы и заказы.
 - Последний блок `match /{document=**} { allow read, write: if false; }` закрывает всё, что не разрешено явно.
 
-**Модерация и спам.** Отзыв публикуется сразу. Удалить неуместный отзыв может только владелец
-в Firebase Console → Firestore Database → `reviews` → документ → **Delete document**.
+**Модерация и спам.** Новый отзыв не публикуется сразу: сайт показывает только одобренные
+(`docs/ADMIN_SETUP.md`, разделы 8–10). Пока раздела модерации в админ-панели нет, статус меняется
+вручную в Firebase Console → Firestore Database → `reviews` → документ → поле `status`. Из браузера
+отклонённый отзыв может навсегда удалить только администратор; в Console владелец может удалить любой.
 В браузере стоит ограничение «не чаще одного отзыва в минуту», но его легко обойти — от массового спама
 дополнительно помогут:
 
 - **Firebase App Check** (reCAPTCHA v3/Enterprise) — Firestore принимает запросы только с вашего сайта;
-- **премодерация**: добавить поле `approved: false` при создании, в правилах читать только `approved == true`,
-  а одобрять отзывы вручную в консоли;
 - **отзывы только от вошедших пользователей**: в правилах `request.auth != null`, а ID документа = `uid` —
   тогда один пользователь может оставить один отзыв.
 
-**Проверка после подключения:** откройте `/reviews`, оставьте отзыв → он появится в списке и в
-Firestore Console (коллекция `reviews`) → обновите страницу — отзыв на месте. В Firestore Console →
-**Rules → Rules Playground** можно проверить, что `update` и `delete` для `/reviews/любой-id` запрещены.
+**Проверка после подключения:** откройте `/reviews`, оставьте отзыв → появится сообщение о модерации,
+в списке отзыва нет, а в Firestore Console (коллекция `reviews`) он есть со `status: 'pending'` →
+поставьте `approved` → обновите страницу — отзыв в списке.
+
+**Автоматические тесты правил** — `npm run test:rules`: 51 тест на локальном Firebase Emulator
+(demo-проект `demo-aroma-donna`, настоящая база не используется) проверяет гостя, покупателя,
+анонимного пользователя и администратора для `reviews`, а также что правила `users`, `orders`,
+`products`, `admins` и запрет по умолчанию не сломаны. Нужна Java 21+ (например, Eclipse Temurin 21).
 
 ### Безопасность
 

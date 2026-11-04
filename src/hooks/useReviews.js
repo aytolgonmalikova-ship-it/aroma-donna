@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchReviewStats, fetchReviews, isReviewsAvailable, REVIEWS_PAGE_SIZE } from '../services/reviewsService';
 
 /**
- * Загрузка отзывов из Firestore: первая страница, «Показать ещё», средняя оценка.
+ * Загрузка одобренных отзывов из Firestore: первая страница, «Показать ещё», средняя оценка.
+ * Отправленный отзыв сюда не добавляется: он ждёт модерации и появится только после одобрения.
  * status: 'loading' | 'ready' | 'error' | 'unavailable' (Firebase не настроен)
  */
 export function useReviews({ pageSize = REVIEWS_PAGE_SIZE, withStats = true } = {}) {
@@ -47,7 +48,7 @@ export function useReviews({ pageSize = REVIEWS_PAGE_SIZE, withStats = true } = 
       const page = await fetchReviews({ cursor: cursorRef.current, pageSize });
       if (!aliveRef.current) return;
       cursorRef.current = page.cursor || cursorRef.current;
-      // Защита от дублей, если новый отзыв уже был добавлен в начало списка
+      // Защита от дублей на стыке страниц
       setReviews((list) => [...list, ...page.reviews.filter((r) => !list.some((x) => x.id === r.id))]);
       setHasMore(page.hasMore);
     } catch (err) {
@@ -57,17 +58,6 @@ export function useReviews({ pageSize = REVIEWS_PAGE_SIZE, withStats = true } = 
     }
   }, [pageSize]);
 
-  /** Показывает только что отправленный отзыв сразу, без повторной загрузки */
-  const addLocal = useCallback((review) => {
-    setReviews((list) => [review, ...list]);
-    setStatus('ready');
-    setStats((s) => {
-      if (!s) return s;
-      const count = s.count + 1;
-      return { count, average: ((s.average || 0) * s.count + review.rating) / count };
-    });
-  }, []);
-
   useEffect(() => {
     aliveRef.current = true;
     load();
@@ -76,5 +66,5 @@ export function useReviews({ pageSize = REVIEWS_PAGE_SIZE, withStats = true } = 
     };
   }, [load]);
 
-  return { reviews, status, error, hasMore, loadingMore, moreError, stats, reload: load, loadMore, addLocal };
+  return { reviews, status, error, hasMore, loadingMore, moreError, stats, reload: load, loadMore };
 }

@@ -12,11 +12,12 @@ import { addReview } from '../../services/reviewsService';
 const EMPTY = { name: '', rating: 0, text: '' };
 
 /**
- * Форма отзыва: имя, оценка 1–5, текст.
- * Отзыв сохраняется в Firestore. «Спасибо» показывается только после того,
+ * Форма отзыва: имя, оценка 1–5, текст. Вход не нужен — отзыв может оставить гость.
+ * Отзыв сохраняется в Firestore со статусом 'pending' и в список на странице не добавляется:
+ * он появится только после одобрения. Сообщение о модерации показывается только после того,
  * как Firestore подтвердил запись; при ошибке введённый текст не теряется.
  */
-export default function ReviewForm({ onCreated }) {
+export default function ReviewForm() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const [values, setValues] = useState(EMPTY);
@@ -39,11 +40,10 @@ export default function ReviewForm({ onCreated }) {
     setStatus('sending');
     setErrorCode(null);
     try {
-      const saved = await addReview(values, i18n.language);
+      await addReview(values, i18n.language);
       setValues(EMPTY);
       setStatus('success');
       dispatch(notify({ type: 'success', message: 'reviews.sentToast' }));
-      onCreated?.(saved);
     } catch (err) {
       if (err.code !== 'cooldown') console.error('[reviews] Не удалось сохранить отзыв:', err.cause || err);
       setErrorCode(err.code || 'failed');
