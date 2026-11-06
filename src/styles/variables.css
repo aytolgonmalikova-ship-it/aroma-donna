@@ -28,8 +28,13 @@
   --blush: #fbecea;
   --gold: #a8812f;
   --gold-soft: #f1e3c2;
+  /* Текст на светлых фонах (C3.2): тот же тон, темнее — контраст ≥ 4.5 по WCAG AA.
+     --gold-text: на --gold-soft 4.78, на самом розовом месте фона главной (#f8d9d6) 4.60, белый текст на нём 6.08;
+     --primary-text: на --rose-soft 4.64 */
+  --gold-text: #7a5e22;
+  --primary-text: #9d4c58;
 
-  --success: #2f7d55;
+  --success: #2e7a53; /* на --success-bg 4.60 (было #2f7d55 — 4.42) */
   --success-bg: #e6f4ec;
   --error: #b3363f;
   --error-bg: #fbe9ea;
@@ -63,6 +68,12 @@
     --header-total: 98px;
   }
 }
+/* Телефоны: верхняя полоса в 2–3 строки (C3.2) — высота шапки до 122px (замер: ru, ky, en на 320–640px) */
+@media (max-width: 640px) {
+  :root {
+    --header-total: 122px;
+  }
+}
 
 [data-theme='dark'] {
   /* Тёмная тема: тёплый графит, приглушённая роза, мягкое золото */
@@ -84,6 +95,8 @@
   --blush: #2c2125;
   --gold: #d9b871;
   --gold-soft: #3a3121;
+  --gold-text: var(--gold); /* тёмная тема — цвета без изменений */
+  --primary-text: var(--primary);
 
   --success: #7fd0a2;
   --success-bg: #1e3329;

@@ -10,6 +10,7 @@ import ProductPage from './pages/ProductPage';
 import CartPage from './pages/CartPage';
 import FavoritesPage from './pages/FavoritesPage';
 import AuthPage from './pages/AuthPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import AccountPage from './pages/AccountPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="favorites" element={<FavoritesPage />} />
         <Route path="login" element={<AuthPage mode="login" />} />
         <Route path="register" element={<AuthPage mode="register" />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route
           path="account"
           element={

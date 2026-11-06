@@ -24,7 +24,7 @@ const withPrice = (product, ml, price) => ({
 const VALUES = {
   name: ' Айгерим ',
   lastName: 'Асанова',
-  phone: '+996 700 123 456',
+  phone: '700123456', // форма (PhoneField): 9 цифр после +996
   email: 'aigerim@mail.com',
   delivery: 'courier',
   region: '',
@@ -230,7 +230,7 @@ test('buildOrder: структура заказа прежняя; гость —
   assert.deepEqual([pickup.shipping.region, pickup.shipping.city, pickup.shipping.address], [null, null, null]);
 });
 
-test('заказ из проверенных данных по-прежнему уходит в Telegram', async () => {
+test('C3.3: заказ из браузера больше не отправляется в Telegram; сообщение строит сервер из своих данных', async () => {
   const r = reviewCheckout(scenario({ seenCatalog: products, fresh: products, cart: [entry(rose, vol(rose))] }));
   const order = buildOrder({
     id: 'AD-4',
@@ -242,22 +242,39 @@ test('заказ из проверенных данных по-прежнему 
     values: VALUES,
     paymentStatus: 'awaitingPayment',
   });
-  let sent;
+  let calls = 0;
   const realFetch = globalThis.fetch;
-  globalThis.fetch = async (url, init) => {
-    sent = JSON.parse(init.body);
+  globalThis.fetch = async () => {
+    calls++;
     return { ok: true, json: async () => ({ ok: true }) };
   };
+  const saved = { ...process.env };
   process.env.TELEGRAM_BOT_TOKEN = '123:test';
   process.env.TELEGRAM_CHAT_ID = '42';
-  const res = { code: 0, setHeader() {}, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; } };
+  const res = { code: 0, headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.code = c; return this; }, json(b) { this.body = b; return this; } };
   try {
-    await handler({ method: 'POST', body: { ...order, mode: 'demo', status: 'demo' } }, res);
+    await handler({ method: 'POST', headers: {}, body: { ...order, mode: 'demo', status: 'demo' }, socket: {} }, res);
   } finally {
     globalThis.fetch = realFetch;
+    process.env = saved;
   }
-  assert.equal(res.code, 200);
-  assert.ok(sent.text.includes(rose.name));
+  assert.notEqual(res.code, 200);
+  assert.equal(calls, 0);
+  // Сервер считает по тем же функциям, что и витрина: название и сумма — из каталога
+  const { priceOrder, buildServerOrder, formatOrderMessage } = await import('../api/_lib/orderCore.js');
+  const request = {
+    items: [{ productId: rose.id, volume: vol(rose), quantity: 1 }],
+    promoCode: null,
+    deliveryMethod: 'courier',
+    paymentMethod: 'cashOnDelivery',
+    customer: { name: 'Айгерим', lastName: 'Асанова', phone: '+996700123456', email: 'aigerim@mail.com' },
+    shipping: { method: 'courier', region: 'bishkek', city: 'bishkek', address: 'ул. Токтогула, 12', comment: '' },
+    expectedTotal: r.totals.grandTotal,
+  };
+  const priced = priceOrder(request, products);
+  assert.equal(priced.totals.grandTotal, r.totals.grandTotal, 'сервер и витрина считают одинаково');
+  const text = formatOrderMessage(buildServerOrder({ orderId: 'AD-261106-ABCDEFGH', now: new Date('2026-11-06T10:00:00Z'), uid: null, request, priced }));
+  assert.ok(text.includes(rose.name));
 });
 
 test('verifyCartLines: исходные данные не меняются', () => {
@@ -277,17 +294,26 @@ test('CheckoutPage: свежий каталог перед окном оплат
   const submit = page.slice(page.indexOf('const handleFormSubmit'), page.indexOf('const placeOrder'));
   assert.ok(submit.indexOf('await verifyCart(values)') < submit.indexOf('setPendingOrder(values)'));
   assert.match(page, /const result = checked \|\| \(await verifyCart\(values\)\)/);
-  assert.match(page, /if \(values\) placeOrder\(values, 'paidDemo'\)/);
-  // Заказ — из result.lines и result.totals, а не из строк Redux
+  // C3.3: после демо-формы карты заказ оформляется без статуса «оплачен» (оплата при получении)
+  assert.match(page, /if \(values\) placeOrder\(values\);/);
+  assert.doesNotMatch(page, /paidDemo/);
+  // Демо-режим: заказ — из result.lines и result.totals, а не из строк Redux
   const place = page.slice(page.indexOf('const placeOrder'), page.indexOf('const handleRemoveProblems'));
   assert.match(place, /buildOrder\(\{[^}]*lines: result\.lines,\s*totals: result\.totals,/);
-  assert.ok(place.indexOf('buildOrder(') < place.indexOf('createOrder(order, user)'));
+  assert.ok(place.indexOf('buildOrder(') < place.indexOf('createDemoOrder(order)'));
   assert.doesNotMatch(place, /items\.map|i\.price/);
-  // Telegram, промокод, очистка корзины и страница успеха — как раньше
-  assert.match(place, /fetch\('\/api\/order'/);
-  assert.match(place, /markPromoCodeUsed\(saved\.promoCode\)/);
-  assert.match(place, /dispatch\(clearCart\(\)\)/);
-  assert.match(place, /navigate\(`\/order-success\/\$\{saved\.id\}`/);
+  // Режим Firebase: на сервер — только позиции из проверенных данных и сумма, которую видел покупатель
+  assert.match(place, /buildOrderRequest\(\{\s*lines: result\.lines,\s*promoCode,\s*deliveryMethod,\s*values,\s*expectedTotal: result\.totals\.grandTotal,/);
+  assert.match(place, /submitOrder\(request, \{ requestId: attemptRef\.current\.requestId, signedIn: Boolean\(user\) \}\)/);
+  // Прямой записи заказа в Firestore и старого вызова /api/order из страницы нет
+  assert.doesNotMatch(page, /createOrder\(|setDoc|addDoc|fetch\('\/api\/order'/);
+  // Промокод, очистка корзины и страница успеха — только после подтверждённого ответа сервера
+  const ok = place.slice(place.indexOf('await submitOrder('), place.indexOf('} catch (err) {'));
+  assert.match(ok, /markPromoCodeUsed\(order\.promoCode\)/);
+  assert.match(ok, /navigate\(`\/order-success\/\$\{order\.orderId\}`/);
+  assert.ok(ok.indexOf('navigate(') < ok.indexOf('dispatch(clearCart())'));
+  const failed = place.slice(place.indexOf('} catch (err) {'));
+  assert.doesNotMatch(failed, /clearCart/);
   // Резервный каталог в Redux не попадает; корзина не очищается сама (покупатель решает)
   const verify = page.slice(page.indexOf('const verifyCart'), page.indexOf('const handleFormSubmit'));
   assert.ok(verify.indexOf("'unverified'") < verify.indexOf('catalogRefreshed(fresh)'));

@@ -2,19 +2,10 @@
 // Функции возвращают КЛЮЧ перевода ошибки (например 'validation.required'),
 // а компонент переводит его через i18next — так ошибки показываются на выбранном языке.
 
+import { isKgLocal } from './phone.js';
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const isEmail = (v) => EMAIL_RE.test(String(v).trim());
-
-/**
- * Телефон Кыргызстана: +996 XXX XXX XXX или 0XXX XXX XXX.
- * Пробелы, скобки и дефисы разрешены — проверяем только цифры.
- */
-export const isPhone = (v) => {
-  const value = String(v).trim();
-  if (!/^[+\d\s()-]+$/.test(value)) return false;
-  const digits = value.replace(/\D/g, '');
-  return (digits.startsWith('996') && digits.length === 12) || (digits.startsWith('0') && digits.length === 10);
-};
 
 export function validateLogin({ email, password }) {
   const errors = {};
@@ -22,6 +13,14 @@ export function validateLogin({ email, password }) {
   else if (!isEmail(email)) errors.email = 'validation.email';
   if (!password) errors.password = 'validation.required';
   else if (password.length < 6) errors.password = 'validation.passwordMin';
+  return errors;
+}
+
+/** Восстановление пароля (Блок 2): нужен только корректный e-mail */
+export function validatePasswordReset({ email }) {
+  const errors = {};
+  if (!String(email ?? '').trim()) errors.email = 'validation.required';
+  else if (!isEmail(email)) errors.email = 'validation.email';
   return errors;
 }
 
@@ -45,8 +44,9 @@ export function validateCheckout(values) {
   else if (values.name.trim().length < 2) errors.name = 'validation.nameMin';
   if (!values.lastName.trim()) errors.lastName = 'validation.required';
   else if (values.lastName.trim().length < 2) errors.lastName = 'validation.lastNameMin';
+  // Телефон (Блок 2): в форме — только 9 цифр после +996 (PhoneField)
   if (!values.phone.trim()) errors.phone = 'validation.required';
-  else if (!isPhone(values.phone)) errors.phone = 'validation.phone';
+  else if (!isKgLocal(values.phone)) errors.phone = 'validation.phone';
   if (!values.email.trim()) errors.email = 'validation.required';
   else if (!isEmail(values.email)) errors.email = 'validation.email';
   if (values.delivery !== 'pickup') {

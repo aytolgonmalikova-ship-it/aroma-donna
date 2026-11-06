@@ -1,5 +1,6 @@
 // Тесты firestore.rules на локальном Firebase Emulator (движок правил — настоящий).
-// Модерация отзывов (этап D) и проверка, что правила users, orders, products, admins не сломаны.
+// Модерация отзывов (этап D), роли администраторов owner и admin (этап A3)
+// и проверка, что правила users, orders, products не сломаны.
 //
 // Запуск: npm run test:rules
 // (= firebase emulators:exec --only firestore --project demo-aroma-donna "node --test tests-emulator/...")
@@ -29,7 +30,19 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
+import {
+  ADMIN2_UID,
+  BAD_UIDS,
+  CANDIDATE_UID,
+  GHOST_UID,
+  NEWBIE2_UID,
+  NEWBIE_UID,
+  OWNER_UID,
+  T0,
+  seedAdminRoles,
+} from './fixtures/adminRoles.js';
 
 const PROJECT_ID = 'demo-aroma-donna';
 const ADMIN_UID = 'admin-uid';
@@ -358,9 +371,9 @@ describe('users', () => {
 });
 
 describe('orders', () => {
-  test('покупатель создаёт и читает только свои заказы, менять не может', async () => {
+  test('покупатель читает только свои заказы; создать (даже свой, C3.3 — только сервер) и менять не может', async () => {
     const db = customerDb();
-    await assertSucceeds(setDoc(doc(db, 'users', CUSTOMER_UID, 'orders', 'order3'), order(CUSTOMER_UID, 'order3')));
+    await assertFails(setDoc(doc(db, 'users', CUSTOMER_UID, 'orders', 'order3'), order(CUSTOMER_UID, 'order3')));
     await assertFails(setDoc(doc(db, 'users', CUSTOMER_UID, 'orders', 'order4'), { ...order(CUSTOMER_UID, 'order4'), status: 'delivered' }));
     await assertFails(setDoc(doc(db, 'users', OTHER_UID, 'orders', 'order5'), order(OTHER_UID, 'order5')));
     await assertSucceeds(getDoc(doc(db, 'users', CUSTOMER_UID, 'orders', 'order1')));
@@ -427,5 +440,475 @@ describe('admins и остальное', () => {
       await assertFails(getDoc(doc(db, 'secrets', 'x')));
       await assertFails(setDoc(doc(db, 'secrets', 'x'), { a: 1 }));
     }
+  });
+});
+
+// ==================== Администраторы: роли owner и admin (этап A3) ====================
+// owner — UID в adminConfig/primary.ownerUid; admin — любой документ admins/{uid}.
+// Общий seed() выше не создаёт adminConfig (так проверяется «конфигурации ещё нет»);
+// здесь роли засеиваются отдельно — seedRoles().
+
+const ownerDb = () => env.authenticatedContext(OWNER_UID).firestore();
+const admin2Db = () => env.authenticatedContext(ADMIN2_UID).firestore();
+const candidateDb = () => env.authenticatedContext(CANDIDATE_UID).firestore();
+const newbieDb = () => env.authenticatedContext(NEWBIE_UID).firestore();
+const configRef = (db) => doc(db, 'adminConfig', 'primary');
+const adminRef = (db, uid) => doc(db, 'admins', uid);
+
+const grant = (by, extra = {}) => ({ grantedAt: serverTimestamp(), grantedBy: by, ...extra });
+// Изменение adminConfig так, как его делает интерфейс: только нужные поля + updatedAt/updatedBy
+const configChange = (uid, changes) => ({ ...changes, updatedAt: serverTimestamp(), updatedBy: uid });
+const offer = (to) => configChange(OWNER_UID, { pendingOwnerUid: to });
+const accept = (uid, previous = OWNER_UID) => configChange(uid, { ownerUid: uid, previousOwnerUid: previous, pendingOwnerUid: null });
+const clearOffer = (uid) => configChange(uid, { pendingOwnerUid: null });
+
+/** Роли: владелец, обычный администратор, кандидат; config = null — без adminConfig/primary */
+const seedRoles = (options) => seedAdminRoles(env, options);
+
+/** Прочитать документ в обход правил (проверка результата) */
+async function readRaw(path) {
+  let data;
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), ...path.split('/')));
+    data = snap.exists() ? snap.data() : null;
+  });
+  return data;
+}
+
+/** Может ли пользователь пользоваться админ-разделами (все заказы — только isAdmin()) */
+const canUseAdminSections = (db) => getDocs(collectionGroup(db, 'orders'));
+
+describe('администраторы: чтение', () => {
+  test('свой документ admins читает каждый вошедший (нет документа — «не админ»), гость — нет', async () => {
+    await seedRoles();
+    for (const [uid, db] of [[OWNER_UID, ownerDb], [ADMIN2_UID, admin2Db], [ADMIN_UID, adminDb], [NEWBIE_UID, newbieDb], [CUSTOMER_UID, customerDb]]) {
+      await assertSucceeds(getDoc(adminRef(db(), uid)));
+    }
+    await assertFails(getDoc(adminRef(guestDb(), OWNER_UID)));
+  });
+
+  test('чужой документ и список администраторов — только владельцу', async () => {
+    await seedRoles();
+    await assertSucceeds(getDoc(adminRef(ownerDb(), ADMIN2_UID)));
+    const list = await assertSucceeds(getDocs(collection(ownerDb(), 'admins')));
+    assert.deepEqual(ids(list), [ADMIN_UID, ADMIN2_UID, CANDIDATE_UID, OWNER_UID].sort());
+    for (const db of [admin2Db, candidateDb, adminDb, customerDb, newbieDb, guestDb]) {
+      await assertFails(getDoc(adminRef(db(), OWNER_UID)));
+      await assertFails(getDocs(collection(db(), 'admins')));
+    }
+  });
+
+  test('adminConfig/primary читает владелец и тот, кому предложена роль; список — никто', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertSucceeds(getDoc(configRef(ownerDb())));
+    await assertSucceeds(getDoc(configRef(candidateDb())));
+    for (const db of [admin2Db, adminDb, customerDb, newbieDb, guestDb]) await assertFails(getDoc(configRef(db())));
+    for (const db of [ownerDb, candidateDb, admin2Db]) await assertFails(getDocs(collection(db(), 'adminConfig')));
+  });
+
+  test('без предложения кандидат adminConfig не читает', async () => {
+    await seedRoles();
+    await assertFails(getDoc(configRef(candidateDb())));
+  });
+});
+
+describe('администраторы: назначение', () => {
+  test('владелец назначает зарегистрированного пользователя; новый администратор сразу работает в разделах', async () => {
+    await seedRoles();
+    await assertFails(canUseAdminSections(newbieDb()));
+    await assertSucceeds(setDoc(adminRef(ownerDb(), NEWBIE_UID), grant(OWNER_UID)));
+    await assertSucceeds(setDoc(adminRef(ownerDb(), NEWBIE2_UID), grant(OWNER_UID, { label: 'С'.repeat(100) })));
+    await assertSucceeds(canUseAdminSections(newbieDb()));
+    // ...но управлять администраторами новый администратор не может
+    await assertFails(getDocs(collection(newbieDb(), 'admins')));
+    const saved = await readRaw(`admins/${NEWBIE_UID}`);
+    assert.equal(saved.grantedBy, OWNER_UID);
+    assert.ok(saved.grantedAt instanceof Timestamp);
+  });
+
+  test('никто, кроме владельца, не назначает администраторов, в том числе самого себя', async () => {
+    await seedRoles();
+    for (const [uid, db] of [[ADMIN2_UID, admin2Db], [CANDIDATE_UID, candidateDb], [ADMIN_UID, adminDb], [NEWBIE_UID, newbieDb], [CUSTOMER_UID, customerDb]]) {
+      await assertFails(setDoc(adminRef(db(), NEWBIE2_UID), grant(uid)));
+      await assertFails(setDoc(adminRef(db(), uid), grant(uid))); // самоназначение
+    }
+    await assertFails(setDoc(adminRef(guestDb(), NEWBIE_UID), grant('guest')));
+    // Владелец не создаёт документ себе (свой документ у него уже есть — это изменение, а изменение запрещено)
+    await assertFails(setDoc(adminRef(ownerDb(), OWNER_UID), grant(OWNER_UID)));
+  });
+
+  test('нельзя назначить UID без профиля users/{uid} или UID неверного формата', async () => {
+    await seedRoles();
+    await assertFails(setDoc(adminRef(ownerDb(), GHOST_UID), grant(OWNER_UID)));
+    for (const uid of BAD_UIDS) await assertFails(setDoc(adminRef(ownerDb(), uid), grant(OWNER_UID)));
+  });
+
+  test('строгий формат документа: только grantedAt, grantedBy и необязательный label', async () => {
+    await seedRoles();
+    const bad = [
+      { ...grant(OWNER_UID), role: 'owner' },
+      { ...grant(OWNER_UID), email: 'x@example.com' },
+      { grantedAt: serverTimestamp() },
+      { grantedBy: OWNER_UID },
+      grant(ADMIN2_UID), // чужой UID в grantedBy
+      { grantedAt: T0, grantedBy: OWNER_UID }, // своё время вместо серверного
+      grant(OWNER_UID, { label: '' }),
+      grant(OWNER_UID, { label: '   ' }),
+      grant(OWNER_UID, { label: 'x'.repeat(101) }),
+      grant(OWNER_UID, { label: 42 }),
+    ];
+    for (const data of bad) await assertFails(setDoc(adminRef(ownerDb(), NEWBIE_UID), data));
+    assert.equal(await readRaw(`admins/${NEWBIE_UID}`), null);
+  });
+
+  test('существующий документ администратора нельзя перезаписать', async () => {
+    await seedRoles();
+    await assertFails(setDoc(adminRef(ownerDb(), ADMIN2_UID), grant(OWNER_UID)));
+    await assertFails(setDoc(adminRef(ownerDb(), ADMIN2_UID), grant(OWNER_UID, { label: 'Новая подпись' })));
+  });
+});
+
+describe('администраторы: изменение и отзыв доступа', () => {
+  test('документы admins не изменяет никто, включая владельца и самого администратора', async () => {
+    await seedRoles();
+    await assertFails(updateDoc(adminRef(ownerDb(), ADMIN2_UID), { label: 'Другая' }));
+    await assertFails(updateDoc(adminRef(ownerDb(), OWNER_UID), { label: 'Я' }));
+    await assertFails(updateDoc(adminRef(admin2Db(), ADMIN2_UID), { role: 'owner' }));
+    await assertFails(updateDoc(adminRef(adminDb(), ADMIN_UID), { role: 'owner' }));
+  });
+
+  test('владелец отзывает доступ обычного администратора — права пропадают сразу', async () => {
+    await seedRoles();
+    await assertSucceeds(canUseAdminSections(admin2Db()));
+    await assertSucceeds(deleteDoc(adminRef(ownerDb(), ADMIN2_UID)));
+    await assertFails(canUseAdminSections(admin2Db()));
+    await assertFails(getDocs(query(collection(admin2Db(), 'reviews'), where('status', '==', 'pending'))));
+    // Старый документ (поле role) тоже отзывается
+    await assertSucceeds(deleteDoc(adminRef(ownerDb(), ADMIN_UID)));
+  });
+
+  test('нельзя отозвать доступ у себя, у владельца и у того, кому предложена роль', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertFails(deleteDoc(adminRef(ownerDb(), OWNER_UID)));
+    await assertFails(deleteDoc(adminRef(ownerDb(), CANDIDATE_UID)));
+    // После отмены предложения — можно
+    await assertSucceeds(updateDoc(configRef(ownerDb()), clearOffer(OWNER_UID)));
+    await assertSucceeds(deleteDoc(adminRef(ownerDb(), CANDIDATE_UID)));
+  });
+
+  test('обычный администратор и посетители никого не удаляют', async () => {
+    await seedRoles();
+    for (const db of [admin2Db, candidateDb, adminDb, customerDb, guestDb]) {
+      for (const uid of [OWNER_UID, ADMIN2_UID, CANDIDATE_UID]) await assertFails(deleteDoc(adminRef(db(), uid)));
+    }
+  });
+});
+
+describe('передача роли владельца: предложение', () => {
+  test('владелец предлагает роль действующему администратору и может заменить предложение', async () => {
+    await seedRoles();
+    await assertSucceeds(updateDoc(configRef(ownerDb()), offer(ADMIN2_UID)));
+    await assertSucceeds(updateDoc(configRef(ownerDb()), offer(CANDIDATE_UID)));
+    const cfg = await readRaw('adminConfig/primary');
+    assert.equal(cfg.pendingOwnerUid, CANDIDATE_UID);
+    assert.equal(cfg.ownerUid, OWNER_UID, 'предложение не меняет владельца');
+    assert.equal(cfg.updatedBy, OWNER_UID);
+  });
+
+  test('нельзя предложить роль себе, не администратору, UID без профиля или неверного формата', async () => {
+    await seedRoles();
+    for (const to of [OWNER_UID, NEWBIE_UID, GHOST_UID, 'bad.uid', '', 42]) {
+      await assertFails(updateDoc(configRef(ownerDb()), offer(to)));
+    }
+  });
+
+  test('обычный администратор и посетители предложение не делают — себе тоже', async () => {
+    await seedRoles();
+    for (const [uid, db] of [[ADMIN2_UID, admin2Db], [CANDIDATE_UID, candidateDb], [ADMIN_UID, adminDb], [NEWBIE_UID, newbieDb]]) {
+      await assertFails(updateDoc(configRef(db()), configChange(uid, { pendingOwnerUid: uid })));
+      await assertFails(updateDoc(configRef(db()), configChange(uid, { pendingOwnerUid: CANDIDATE_UID })));
+    }
+  });
+
+  test('предложение не меняет ownerUid и previousOwnerUid, только с updatedAt = время сервера и updatedBy = свой UID', async () => {
+    await seedRoles();
+    const cfg = configRef(ownerDb());
+    await assertFails(updateDoc(cfg, configChange(OWNER_UID, { pendingOwnerUid: CANDIDATE_UID, ownerUid: CANDIDATE_UID })));
+    await assertFails(updateDoc(cfg, configChange(OWNER_UID, { pendingOwnerUid: CANDIDATE_UID, previousOwnerUid: ADMIN2_UID })));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: CANDIDATE_UID, updatedAt: T0, updatedBy: OWNER_UID }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: CANDIDATE_UID, updatedAt: serverTimestamp(), updatedBy: ADMIN2_UID }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: CANDIDATE_UID, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(cfg, { ...offer(CANDIDATE_UID), note: 'лишнее поле' }));
+    await assertFails(updateDoc(cfg, { ...offer(CANDIDATE_UID), updatedBy: deleteField() }));
+    await assertFails(updateDoc(cfg, { ...offer(CANDIDATE_UID), previousOwnerUid: deleteField() }));
+  });
+});
+
+describe('передача роли владельца: принятие, отмена, отклонение', () => {
+  test('кандидат принимает роль: он — владелец, прежний владелец — обычный администратор', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertSucceeds(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+    const cfg = await readRaw('adminConfig/primary');
+    assert.deepEqual(
+      { ownerUid: cfg.ownerUid, pendingOwnerUid: cfg.pendingOwnerUid, previousOwnerUid: cfg.previousOwnerUid, updatedBy: cfg.updatedBy },
+      { ownerUid: CANDIDATE_UID, pendingOwnerUid: null, previousOwnerUid: OWNER_UID, updatedBy: CANDIDATE_UID },
+    );
+    // Новый владелец управляет администраторами
+    await assertSucceeds(getDocs(collection(candidateDb(), 'admins')));
+    await assertSucceeds(setDoc(adminRef(candidateDb(), NEWBIE_UID), grant(CANDIDATE_UID)));
+    // Прежний владелец — обычный администратор: разделы работают, управление ролями — нет
+    await assertSucceeds(canUseAdminSections(ownerDb()));
+    await assertFails(getDocs(collection(ownerDb(), 'admins')));
+    await assertFails(getDoc(configRef(ownerDb())));
+    await assertFails(updateDoc(configRef(ownerDb()), offer(ADMIN2_UID)));
+    await assertFails(deleteDoc(adminRef(ownerDb(), NEWBIE_UID)));
+    // Новый владелец может отозвать доступ прежнего
+    await assertSucceeds(deleteDoc(adminRef(candidateDb(), OWNER_UID)));
+  });
+
+  test('ownerUid меняется только при принятии самим назначенным администратором', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    // Владелец не может «принять» за кандидата
+    await assertFails(updateDoc(configRef(ownerDb()), configChange(OWNER_UID, { ownerUid: CANDIDATE_UID, previousOwnerUid: OWNER_UID, pendingOwnerUid: null })));
+    // Другой администратор не может принять чужое предложение ни на себя, ни на кандидата
+    await assertFails(updateDoc(configRef(admin2Db()), accept(ADMIN2_UID)));
+    await assertFails(updateDoc(configRef(admin2Db()), configChange(ADMIN2_UID, { ownerUid: CANDIDATE_UID, previousOwnerUid: OWNER_UID, pendingOwnerUid: null })));
+    await assertFails(updateDoc(configRef(newbieDb()), accept(NEWBIE_UID)));
+    await assertFails(updateDoc(configRef(guestDb()), accept(GHOST_UID)));
+    assert.equal((await readRaw('adminConfig/primary')).ownerUid, OWNER_UID);
+  });
+
+  test('принятие — только точным набором значений', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    const cfg = configRef(candidateDb());
+    await assertFails(updateDoc(cfg, accept(CANDIDATE_UID, ADMIN2_UID))); // чужой previousOwnerUid
+    await assertFails(updateDoc(cfg, configChange(CANDIDATE_UID, { ownerUid: CANDIDATE_UID, previousOwnerUid: OWNER_UID }))); // предложение не снято
+    await assertFails(updateDoc(cfg, configChange(CANDIDATE_UID, { ownerUid: ADMIN2_UID, previousOwnerUid: OWNER_UID, pendingOwnerUid: null })));
+    await assertFails(updateDoc(cfg, { ...accept(CANDIDATE_UID), updatedAt: T0 }));
+    await assertFails(updateDoc(cfg, { ...accept(CANDIDATE_UID), updatedBy: OWNER_UID }));
+  });
+
+  test('без действующего предложения принять роль нельзя', async () => {
+    await seedRoles();
+    for (const [uid, db] of [[CANDIDATE_UID, candidateDb], [ADMIN2_UID, admin2Db]]) {
+      await assertFails(updateDoc(configRef(db()), accept(uid)));
+    }
+  });
+
+  test('отмена — только владельцем и только при действующем предложении', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertFails(updateDoc(configRef(admin2Db()), clearOffer(ADMIN2_UID)));
+    await assertSucceeds(updateDoc(configRef(ownerDb()), clearOffer(OWNER_UID)));
+    assert.equal((await readRaw('adminConfig/primary')).pendingOwnerUid, null);
+    await assertFails(updateDoc(configRef(ownerDb()), clearOffer(OWNER_UID))); // отменять нечего
+  });
+
+  test('отклонить может только тот, кому предложено', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertFails(updateDoc(configRef(admin2Db()), clearOffer(ADMIN2_UID)));
+    await assertSucceeds(updateDoc(configRef(candidateDb()), clearOffer(CANDIDATE_UID)));
+    const cfg = await readRaw('adminConfig/primary');
+    assert.equal(cfg.pendingOwnerUid, null);
+    assert.equal(cfg.ownerUid, OWNER_UID);
+  });
+
+  test('гонка: после отмены или отклонения принять уже нельзя', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertSucceeds(updateDoc(configRef(ownerDb()), clearOffer(OWNER_UID)));
+    await assertFails(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+    await assertSucceeds(updateDoc(configRef(ownerDb()), offer(CANDIDATE_UID)));
+    await assertSucceeds(updateDoc(configRef(candidateDb()), clearOffer(CANDIDATE_UID)));
+    await assertFails(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+  });
+
+  test('гонка: роль не переходит к тому, кто уже не администратор', async () => {
+    // Предложение «зависло» (доступ отозвали одновременно с предложением или через Console)
+    await seedRoles({ pending: CANDIDATE_UID });
+    await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), 'admins', CANDIDATE_UID)));
+    await assertFails(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+    await assertFails(updateDoc(configRef(candidateDb()), clearOffer(CANDIDATE_UID)));
+    assert.equal((await readRaw('adminConfig/primary')).ownerUid, OWNER_UID);
+    // Владелец снимает зависшее предложение
+    await assertSucceeds(updateDoc(configRef(ownerDb()), clearOffer(OWNER_UID)));
+  });
+
+  test('гонка: после передачи прежний владелец не отменяет и не меняет предложение, повторно принять нельзя', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertSucceeds(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+    await assertFails(updateDoc(configRef(ownerDb()), clearOffer(OWNER_UID)));
+    await assertFails(updateDoc(configRef(ownerDb()), offer(ADMIN2_UID)));
+    await assertFails(updateDoc(configRef(ownerDb()), accept(OWNER_UID, CANDIDATE_UID)));
+    await assertFails(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+    // Новый владелец может вернуть роль обычным путём: предложение → принятие
+    await assertSucceeds(updateDoc(configRef(candidateDb()), configChange(CANDIDATE_UID, { pendingOwnerUid: OWNER_UID })));
+    await assertSucceeds(updateDoc(configRef(ownerDb()), accept(OWNER_UID, CANDIDATE_UID)));
+  });
+});
+
+describe('adminConfig: создание и удаление; без adminConfig; старые документы', () => {
+  test('adminConfig/primary не создаётся, не перезаписывается и не удаляется из браузера', async () => {
+    await seedRoles({ config: null });
+    const full = { ownerUid: ADMIN2_UID, pendingOwnerUid: null, previousOwnerUid: null, updatedAt: serverTimestamp(), updatedBy: ADMIN2_UID };
+    for (const [uid, db] of [[ADMIN2_UID, admin2Db], [OWNER_UID, ownerDb], [ADMIN_UID, adminDb], [CUSTOMER_UID, customerDb]]) {
+      await assertFails(setDoc(configRef(db()), { ...full, ownerUid: uid, updatedBy: uid }));
+    }
+    await assertFails(setDoc(doc(admin2Db(), 'adminConfig', 'other'), full));
+    await seedRoles();
+    await assertFails(setDoc(configRef(ownerDb()), { ownerUid: ADMIN2_UID, pendingOwnerUid: null, previousOwnerUid: OWNER_UID, updatedAt: serverTimestamp(), updatedBy: OWNER_UID }));
+    await assertFails(deleteDoc(configRef(ownerDb())));
+    await assertFails(deleteDoc(configRef(admin2Db())));
+  });
+
+  test('без adminConfig управлять ролями не может никто, админ-разделы работают', async () => {
+    await seedRoles({ config: null });
+    for (const db of [ownerDb, admin2Db, adminDb]) {
+      await assertSucceeds(canUseAdminSections(db()));
+      await assertFails(getDocs(collection(db(), 'admins')));
+      await assertFails(setDoc(adminRef(db(), NEWBIE_UID), grant('x')));
+      await assertFails(deleteDoc(adminRef(db(), CANDIDATE_UID)));
+      await assertFails(getDoc(configRef(db())));
+    }
+    // Свой документ читается — проверка «я администратор?» работает
+    await assertSucceeds(getDoc(adminRef(ownerDb(), OWNER_UID)));
+  });
+
+  test('старые документы admins работают, а поле role не даёт прав владельца', async () => {
+    await seedRoles();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins', 'legacy-owner-uid'), { role: 'owner' });
+      await setDoc(doc(ctx.firestore(), 'admins', 'legacy-named-uid'), { email: 'a@example.com', name: 'Админ', createdAt: T0 });
+    });
+    const legacyOwner = () => env.authenticatedContext('legacy-owner-uid').firestore();
+    const legacyNamed = () => env.authenticatedContext('legacy-named-uid').firestore();
+    for (const db of [legacyOwner, legacyNamed, adminDb]) {
+      await assertSucceeds(canUseAdminSections(db()));
+      await assertSucceeds(getDocs(query(collection(db(), 'reviews'), where('status', '==', 'pending'))));
+      await assertFails(getDocs(collection(db(), 'admins')));
+      await assertFails(setDoc(adminRef(db(), NEWBIE_UID), grant('legacy-owner-uid')));
+      await assertFails(updateDoc(configRef(db()), configChange('legacy-owner-uid', { pendingOwnerUid: CANDIDATE_UID })));
+    }
+  });
+
+  test('владелец из adminConfig без документа admins/{uid} (ошибка в Console) не управляет администраторами', async () => {
+    await seedRoles();
+    await env.withSecurityRulesDisabled((ctx) => deleteDoc(doc(ctx.firestore(), 'admins', OWNER_UID)));
+    await assertFails(getDocs(collection(ownerDb(), 'admins')));
+    await assertFails(getDoc(adminRef(ownerDb(), ADMIN2_UID)));
+    await assertFails(setDoc(adminRef(ownerDb(), NEWBIE_UID), grant(OWNER_UID)));
+    await assertFails(deleteDoc(adminRef(ownerDb(), ADMIN2_UID)));
+    await assertFails(getDoc(configRef(ownerDb())));
+    await assertFails(updateDoc(configRef(ownerDb()), offer(ADMIN2_UID)));
+    await assertFails(canUseAdminSections(ownerDb()));
+  });
+
+  test('роль владельца нельзя предложить документу admins с ID неверного формата (созданному в Console)', async () => {
+    await seedRoles();
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins', 'legacy.admin'), { role: 'admin' });
+      await setDoc(doc(ctx.firestore(), 'users', 'legacy.admin'), { name: 'Старый', email: 'l@example.com', createdAt: T0 });
+    });
+    await assertFails(updateDoc(configRef(ownerDb()), offer('legacy.admin')));
+    assert.equal((await readRaw('adminConfig/primary')).pendingOwnerUid, null);
+  });
+
+  test('регрессия: владелец и обычный администратор — те же права в заказах, товарах, отзывах и профилях', async () => {
+    await seedRoles();
+    for (const db of [ownerDb, admin2Db]) {
+      await assertSucceeds(getDocs(collectionGroup(db(), 'orders')));
+      await assertSucceeds(updateDoc(doc(db(), 'users', CUSTOMER_UID, 'orders', 'order1'), { status: 'confirmed', statusUpdatedAt: serverTimestamp() }));
+      await assertSucceeds(getDoc(doc(db(), 'users', CUSTOMER_UID)));
+      await assertFails(updateDoc(doc(db(), 'users', CUSTOMER_UID), { name: 'Взлом' }));
+      await assertSucceeds(getDocs(collection(db(), 'products')));
+      await assertSucceeds(updateDoc(doc(db(), 'reviews', 'pending1'), moderation('approved')));
+      await assertFails(deleteDoc(doc(db(), 'reviews', 'approved1')));
+    }
+  });
+});
+
+// ==================== A3.1: пакетные записи и дополнительные проверки ====================
+
+describe('A3.1: пакетные записи (writeBatch) и дополнительные проверки ролей', () => {
+  test('пакет «предложить роль + отозвать доступ кандидата» отклоняется целиком, в любом порядке', async () => {
+    await seedRoles();
+    for (const order of ['offer-first', 'delete-first']) {
+      const db = ownerDb();
+      const batch = writeBatch(db);
+      if (order === 'offer-first') {
+        batch.update(configRef(db), offer(ADMIN2_UID));
+        batch.delete(adminRef(db, ADMIN2_UID));
+      } else {
+        batch.delete(adminRef(db, ADMIN2_UID));
+        batch.update(configRef(db), offer(ADMIN2_UID));
+      }
+      await assertFails(batch.commit());
+    }
+    // Ничего не записано: предложения нет, администратор на месте и работает
+    assert.equal((await readRaw('adminConfig/primary')).pendingOwnerUid, null);
+    assert.ok(await readRaw(`admins/${ADMIN2_UID}`));
+    await assertSucceeds(canUseAdminSections(admin2Db()));
+    // По отдельности те же операции разрешены (обычный порядок работы)
+    await assertSucceeds(deleteDoc(adminRef(ownerDb(), ADMIN2_UID)));
+    await assertSucceeds(updateDoc(configRef(ownerDb()), offer(CANDIDATE_UID)));
+  });
+
+  test('пакет «отменить предложение + отозвать доступ кандидата» тоже отклоняется: сначала отмена, потом отзыв', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    const db = ownerDb();
+    const batch = writeBatch(db);
+    batch.update(configRef(db), clearOffer(OWNER_UID));
+    batch.delete(adminRef(db, CANDIDATE_UID));
+    await assertFails(batch.commit());
+    assert.equal((await readRaw('adminConfig/primary')).pendingOwnerUid, CANDIDATE_UID);
+    assert.ok(await readRaw(`admins/${CANDIDATE_UID}`));
+  });
+
+  test('пакет «назначить администратора + предложить ему роль» проходит: он администратор после пакета, принимает сам', async () => {
+    await seedRoles();
+    const db = ownerDb();
+    const batch = writeBatch(db);
+    batch.set(adminRef(db, NEWBIE_UID), grant(OWNER_UID));
+    batch.update(configRef(db), offer(NEWBIE_UID));
+    await assertSucceeds(batch.commit());
+    const cfg = await readRaw('adminConfig/primary');
+    assert.equal(cfg.pendingOwnerUid, NEWBIE_UID);
+    assert.equal(cfg.ownerUid, OWNER_UID, 'роль ещё не передана');
+    await assertSucceeds(updateDoc(configRef(newbieDb()), accept(NEWBIE_UID)));
+  });
+
+  test('прежний владелец после передачи не назначает администраторов и не читает чужие документы admins', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    await assertSucceeds(updateDoc(configRef(candidateDb()), accept(CANDIDATE_UID)));
+    await assertFails(setDoc(adminRef(ownerDb(), NEWBIE_UID), grant(OWNER_UID)));
+    await assertFails(getDoc(adminRef(ownerDb(), ADMIN2_UID)));
+    await assertFails(getDoc(adminRef(ownerDb(), CANDIDATE_UID)));
+    // Свой документ он по-прежнему читает — он обычный администратор
+    await assertSucceeds(getDoc(adminRef(ownerDb(), OWNER_UID)));
+    assert.equal(await readRaw(`admins/${NEWBIE_UID}`), null);
+  });
+
+  test('покупатель и гость не удаляют adminConfig/primary', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    for (const db of [customerDb, newbieDb, guestDb]) await assertFails(deleteDoc(configRef(db())));
+    assert.ok(await readRaw('adminConfig/primary'));
+  });
+
+  test('отмена предложения: updatedAt и updatedBy подделать нельзя', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    const cfg = configRef(ownerDb());
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedAt: T0, updatedBy: OWNER_UID }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedAt: serverTimestamp(), updatedBy: CANDIDATE_UID }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedAt: serverTimestamp() })); // updatedBy остался «console»
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedBy: OWNER_UID })); // updatedAt остался старым
+    assert.equal((await readRaw('adminConfig/primary')).pendingOwnerUid, CANDIDATE_UID);
+  });
+
+  test('отклонение предложения: updatedAt и updatedBy подделать нельзя', async () => {
+    await seedRoles({ pending: CANDIDATE_UID });
+    const cfg = configRef(candidateDb());
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedAt: T0, updatedBy: CANDIDATE_UID }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedAt: serverTimestamp(), updatedBy: OWNER_UID }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(cfg, { pendingOwnerUid: null, updatedBy: CANDIDATE_UID }));
+    assert.equal((await readRaw('adminConfig/primary')).pendingOwnerUid, CANDIDATE_UID);
   });
 });

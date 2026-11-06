@@ -24,9 +24,10 @@ import {
 import { catalogRefreshed, selectProductsSource, selectProductsStatus } from '../features/products/productsSlice';
 import { selectAuthState } from '../features/user/userSlice';
 import { notify } from '../features/notifications/notificationsSlice';
-import { createOrder } from '../services/orderService';
+import { createDemoOrder, saveRecentOrder, submitOrder } from '../services/orderService';
 import { fetchProductsApi } from '../services/productsApi';
 import { buildOrder, reviewCheckout } from '../utils/checkoutReview';
+import { buildOrderRequest, checkoutErrorMessage, nextAttempt, reviewFromServer } from '../utils/orderRequest';
 import { calcDelivery } from '../utils/promo';
 import { createOrderId, formatPrice } from '../utils/format';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -69,6 +70,8 @@ export default function CheckoutPage() {
   const [pendingOrder, setPendingOrder] = useState(null); // данные покупателя, ожидающие DEMO-оплаты
   const [review, setReview] = useState(null); // итог проверки: { status: 'blocked' | 'confirm', values, … }
   const submittedRef = useRef(false); // чтобы после очистки корзины не показать «корзина пуста»
+  // Попытка оформления: тот же requestId при повторе того же запроса (без второго заказа), новый — при изменении
+  const attemptRef = useRef(null);
   useDocumentTitle(t('checkout.title'));
 
   const delivery = calcDelivery(deliveryMethod, total);
@@ -166,14 +169,17 @@ export default function CheckoutPage() {
       setPendingOrder(values); // открываем окно банковской карты с проверенной суммой
       return;
     }
-    placeOrder(values, 'awaitingPayment', checked);
+    placeOrder(values, checked);
   };
 
   /**
-   * Сохранение заказа. checked — итог проверки, если она только что прошла (наличные);
-   * после окна оплаты картой проверка повторяется: за это время каталог мог измениться.
+   * Оформление заказа. checked — итог проверки, если она только что прошла (наличные);
+   * после окна DEMO-оплаты проверка повторяется: за это время каталог мог измениться.
+   * Firebase: заказ создаёт сервер (/api/order) — браузер отправляет позиции, способы доставки и оплаты,
+   * данные покупателя и сумму, которую он видел; статус оплаты всегда «Ожидает оплаты» (ставит сервер).
+   * Корзина очищается только после подтверждённого ответа сервера.
    */
-  const placeOrder = async (values, paymentStatus, checked = null) => {
+  const placeOrder = async (values, checked = null) => {
     setSubmitting(true);
     setSubmitError('');
     const result = checked || (await verifyCart(values));
@@ -181,41 +187,65 @@ export default function CheckoutPage() {
       setSubmitting(false);
       return;
     }
-    const order = buildOrder({
-      id: createOrderId(),
-      createdAt: new Date().toISOString(),
-      user,
-      lines: result.lines,
-      totals: result.totals,
-      promoCode,
-      values,
-      paymentStatus,
-    });
-    try {
-      const saved = await createOrder(order, user);
-      try {
-        const response = await fetch('/api/order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(saved),
-        });
 
-        if (!response.ok) {
-          console.error('Не удалось отправить заказ в Telegram');
-        }
-      } catch (error) {
-        console.error('Ошибка отправки в Telegram:', error);
+    // Демо-режим без Firebase: заказ только в этом браузере, как раньше
+    if (mode !== 'firebase') {
+      const order = buildOrder({
+        id: createOrderId(),
+        createdAt: new Date().toISOString(),
+        user,
+        lines: result.lines,
+        totals: result.totals,
+        promoCode,
+        values,
+        paymentStatus: 'awaitingPayment',
+      });
+      try {
+        const saved = await createDemoOrder(order);
+        submittedRef.current = true;
+        if (saved.promoCode) dispatch(markPromoCodeUsed(saved.promoCode));
+        navigate(`/order-success/${saved.id}`, { state: { order: saved }, replace: true });
+        dispatch(clearCart());
+        dispatch(notify({ message: 'notify.orderPlaced', params: { id: saved.id } }));
+      } catch {
+        setSubmitError(t('checkout.submitError'));
+        setSubmitting(false);
       }
+      return;
+    }
+
+    const request = buildOrderRequest({
+      lines: result.lines,
+      promoCode,
+      deliveryMethod,
+      values,
+      expectedTotal: result.totals.grandTotal,
+    });
+    attemptRef.current = nextAttempt(attemptRef.current, request, () => crypto.randomUUID());
+    try {
+      const { order } = await submitOrder(request, { requestId: attemptRef.current.requestId, signedIn: Boolean(user) });
+      attemptRef.current = null;
       submittedRef.current = true;
-      if (saved.promoCode) dispatch(markPromoCodeUsed(saved.promoCode));
-      navigate(`/order-success/${saved.id}`, { state: { order: saved }, replace: true });
+      saveRecentOrder(order); // только номер, сумма и состав — без телефона, e-mail и адреса
+      if (order.promoCode) dispatch(markPromoCodeUsed(order.promoCode));
+      navigate(`/order-success/${order.orderId}`, { state: { order }, replace: true });
       dispatch(clearCart());
-      dispatch(notify({ message: 'notify.orderPlaced', params: { id: saved.id } }));
-    } catch {
-      setSubmitError(t('checkout.submitError'));
+      dispatch(notify({ message: 'notify.orderPlaced', params: { id: order.orderId } }));
+    } catch (err) {
       setSubmitting(false);
+      // Цены, сумма или наличие изменились: актуальные данные сервера и повторное подтверждение
+      const serverReview = reviewFromServer(err, items);
+      if (serverReview) {
+        try {
+          dispatch(catalogRefreshed(await fetchProductsApi(0)));
+        } catch {
+          /* каталог обновится при следующей проверке */
+        }
+        setReview({ ...serverReview, values });
+        return;
+      }
+      const message = checkoutErrorMessage(err);
+      setSubmitError(t(message.key, message.params));
     }
   };
 
@@ -236,7 +266,7 @@ export default function CheckoutPage() {
   const handleDemoPaymentSuccess = () => {
     const values = pendingOrder;
     setPendingOrder(null);
-    if (values) placeOrder(values, 'paidDemo');
+    if (values) placeOrder(values); // DEMO: деньги не списаны, статус оплаты — «Ожидает оплаты»
   };
 
   return (
@@ -247,7 +277,7 @@ export default function CheckoutPage() {
       />
       <div className="container section--tight">
         <DemoNotice variant="warning">
-          {mode === 'firebase' && user ? t('checkout.firebaseNotice') : t('checkout.demoNotice')}
+          {mode === 'firebase' ? t(user ? 'checkout.firebaseNotice' : 'checkout.firebaseGuestNotice') : t('checkout.demoNotice')}
         </DemoNotice>
         {!user && (
           <p className="checkout__guest">

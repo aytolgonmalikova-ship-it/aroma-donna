@@ -23,6 +23,15 @@ export const loginUser = createAsyncThunk('user/login', async (data, { rejectWit
   }
 });
 
+// Вход через Google (Блок 2): тот же формат пользователя и ошибок, что у входа по паролю
+export const loginWithGoogleUser = createAsyncThunk('user/loginWithGoogle', async (_, { rejectWithValue }) => {
+  try {
+    return await authService.loginWithGoogle();
+  } catch (error) {
+    return rejectWithValue(authService.toErrorKey(error));
+  }
+});
+
 export const logoutUser = createAsyncThunk('user/logout', async () => {
   await authService.logout();
 });
@@ -65,6 +74,13 @@ const userSlice = createSlice({
       .addCase(loginUser.pending, pending)
       .addCase(loginUser.fulfilled, fulfilled)
       .addCase(loginUser.rejected, rejected)
+      .addCase(loginWithGoogleUser.pending, pending)
+      .addCase(loginWithGoogleUser.fulfilled, fulfilled)
+      // Пользователь закрыл окно Google — это не ошибка: сообщение не показывается
+      .addCase(loginWithGoogleUser.rejected, (state, action) => {
+        rejected(state, action);
+        if (action.payload === 'auth.google.cancelled') state.error = null;
+      })
       .addCase(logoutUser.fulfilled, (state) => {
         state.current = null;
       });

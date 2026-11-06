@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   demoUsers: 'aroma_demo_users', // только имя и e-mail, БЕЗ паролей
   demoSession: 'aroma_demo_session',
   demoOrders: 'aroma_demo_orders',
+  recentOrders: 'aroma_recent_orders', // сводка последних заказов: номер, сумма, состав — без персональных данных
   usedPromoCodes: 'aroma_used_promo_codes',
   lastReviewAt: 'aroma_last_review_at', // время последнего отзыва (защита от частой отправки)
 };

@@ -119,8 +119,11 @@ npm run dev
 | `npm run build` | Создаёт оптимизированную сборку в папке `dist` |
 | `npm run preview` | Показывает собранную версию из `dist` на http://localhost:4173 |
 | `npm run lint` | Проверяет код линтером ESLint |
-| `npm test` | Запускает тесты формы обратной связи, серверной функции и проверки отзывов (`tests/`) |
+| `npm test` | Запускает автоматические тесты (`tests/`): формы, корзина, заказы, каталог, админ-панель, отзывы и их модерация |
 | `npm run test:rules` | Проверяет `firestore.rules` на локальном Firebase Emulator (`tests-emulator/`, нужна Java 21+) |
+| `npm run emulators:dev` | Запускает эмуляторы Auth и Firestore (demo-проект `demo-aroma-donna`) для ручной проверки |
+| `npm run seed:emulator` | Заполняет эмуляторы тестовыми пользователями и отзывами (рабочая база не затрагивается) |
+| `npm run dev:emulator` | Запускает сайт в тестовом режиме с эмуляторами на http://127.0.0.1:5174 (нужен файл `.env.emulator`) |
 
 ---
 
@@ -433,9 +436,10 @@ Aroma-Donna/
 | `src/utils/validation.js` → `validateReview` | Проверка в браузере: имя 2–50 символов, оценка — целое 1–5, текст 10–1000 символов |
 | `firestore.rules` → `match /reviews/{reviewId}` | **Та же проверка на сервере Firebase** и права модерации |
 | `tests-emulator/firestore.rules.emulator.js` | Тесты правил на локальном Firebase Emulator (`npm run test:rules`) |
+| `src/pages/admin/AdminReviewsPage.jsx` и др. | Раздел модерации «Отзывы» в админ-панели (`/admin/reviews`) — `docs/ADMIN_SETUP.md`, раздел 11 |
 
 Документ отзыва: `{ name, rating, text, lang, status, createdAt }`. Дату ставит сервер (`serverTimestamp()`),
-новый отзыв всегда `status: 'pending'`; при модерации добавляется `moderatedAt` (см. `docs/ADMIN_SETUP.md`, разделы 8–10).
+новый отзыв всегда `status: 'pending'`; при модерации добавляется `moderatedAt` (см. `docs/ADMIN_SETUP.md`, разделы 8–11).
 E-mail и другие личные данные не собираются — имя публикуется, о чём сказано под полем.
 
 **Правила доступа к отзывам** (`firestore.rules`, модерация — этап D):
@@ -476,19 +480,23 @@ match /reviews/{reviewId} {
 - Последний блок `match /{document=**} { allow read, write: if false; }` закрывает всё, что не разрешено явно.
 
 **Модерация и спам.** Новый отзыв не публикуется сразу: сайт показывает только одобренные
-(`docs/ADMIN_SETUP.md`, разделы 8–10). Пока раздела модерации в админ-панели нет, статус меняется
-вручную в Firebase Console → Firestore Database → `reviews` → документ → поле `status`. Из браузера
+(`docs/ADMIN_SETUP.md`, разделы 8–11). Администратор одобряет, отклоняет, возвращает в ожидание и
+навсегда удаляет отклонённые отзывы в админ-панели: `/admin/reviews` (раздел 11). Из браузера
 отклонённый отзыв может навсегда удалить только администратор; в Console владелец может удалить любой.
 В браузере стоит ограничение «не чаще одного отзыва в минуту», но его легко обойти — от массового спама
 дополнительно помогут:
 
-- **Firebase App Check** (reCAPTCHA v3/Enterprise) — Firestore принимает запросы только с вашего сайта;
+- **проверка отзывов через сервер с App Check** — отдельная доработка (сейчас App Check проверяет только
+  гостевые заказы на сервере). **Не включайте** в Firebase Console App Check Enforcement для Cloud Firestore
+  и Authentication: сайт не отправляет токен App Check в каждом запросе к Firestore, и после включения
+  перестанут работать каталог, вход, отзывы и кабинет (см. `docs/LAUNCH_CHECKLIST.md`, шаг 4);
 - **отзывы только от вошедших пользователей**: в правилах `request.auth != null`, а ID документа = `uid` —
   тогда один пользователь может оставить один отзыв.
 
 **Проверка после подключения:** откройте `/reviews`, оставьте отзыв → появится сообщение о модерации,
-в списке отзыва нет, а в Firestore Console (коллекция `reviews`) он есть со `status: 'pending'` →
-поставьте `approved` → обновите страницу — отзыв в списке.
+в списке отзыва нет → в админ-панели `/admin/reviews` он на вкладке «Ожидают» → «Одобрить» → обновите
+`/reviews` — отзыв в списке. Без риска для рабочих данных то же можно проверить на эмуляторах
+(`docs/ADMIN_SETUP.md`, раздел 12).
 
 **Автоматические тесты правил** — `npm run test:rules`: 51 тест на локальном Firebase Emulator
 (demo-проект `demo-aroma-donna`, настоящая база не используется) проверяет гостя, покупателя,
@@ -500,8 +508,10 @@ match /reviews/{reviewId} {
 - Файл `.env` указан в `.gitignore` и **не включён в архив** — не отправляйте его другим людям.
 - `apiKey` веб-приложения Firebase — это идентификатор проекта, а не секретный пароль; он всё равно
   попадает в браузер. Данные защищает не скрытие ключа, а **правила Firestore** (`firestore.rules`):
-  пользователь может читать и создавать только **свои** заказы, изменять и удалять заказы нельзя.
-  Отзывы читают все, а создавать их можно только в строгом формате, изменять и удалять — нельзя (см. выше).
+  пользователь читает только **свои** заказы; создаёт заказы только сервер (`/api/order`, Firebase Admin SDK),
+  а администратор меняет у заказа (обычного и гостевого) только статус. Удалять заказы нельзя.
+  Одобренные отзывы читают все, создавать их можно только в строгом формате со `status: 'pending'`;
+  менять статус и удалять отклонённые может только администратор (см. выше).
   Эта проверка выполняется **на сервере Firebase**, а не скрытием кнопок в интерфейсе.
 - Пароли никогда не сохраняются в `localStorage`.
 - Данные банковских карт сайт не запрашивает: оплата только при получении.
@@ -620,14 +630,16 @@ match /reviews/{reviewId} {
 2. Зайдите на [vercel.com](https://vercel.com) → **Add New → Project** → выберите репозиторий.
 3. Vercel сам определит Vite: Build Command `npm run build`, Output Directory `dist`.
 4. **Settings → Environment Variables** → добавьте нужные переменные из `.env`: шесть `VITE_FIREBASE_*` (для Firebase),
-   три `VITE_EMAILJS_*` и `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (для формы «Контакты», см. [раздел 9](#9-форма-контакты-emailjs-и-telegram)).
+   три `VITE_EMAILJS_*` и `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (для формы «Контакты», см. [раздел 9](#9-форма-контакты-emailjs-и-telegram)),
+   а для оформления заказов — `FIREBASE_SERVICE_ACCOUNT_B64`, `ORDER_HMAC_SECRET` и `VITE_RECAPTCHA_SITE_KEY`.
+   Полный порядок действий (Firebase Console, App Check, правила, проверка) — в [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).
 5. **Deploy.**
 6. Если используете Firebase: в Firebase Console → Authentication → **Settings → Authorized domains**
    добавьте адрес сайта на Vercel (`aroma-donna.vercel.app` и т.п.).
 
 Файл `vercel.json` перенаправляет все адреса, кроме `/api/...`, на `index.html` — без него прямой заход на
-`/catalog` или обновление страницы на Vercel давали бы ошибку 404. Файл `api/contact.js` Vercel
-сам превращает в серверную функцию — отдельно настраивать её не нужно.
+`/catalog` или обновление страницы на Vercel давали бы ошибку 404. Файлы `api/contact.js`, `api/order.js`
+и `api/order-notify.js` Vercel сам превращает в серверные функции (папка `api/_lib` — общий код, не функции).
 
 ---
 

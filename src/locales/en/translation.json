@@ -311,6 +311,7 @@
     "emptyText": "Your cart is empty. Add fragrances from the catalog.",
     "demoNotice": "Demo mode: the order is saved only in this browser. It is not sent to a store, no money is charged and nothing will be delivered.",
     "firebaseNotice": "The order will be saved to your account (Firebase). No online payment is made — this is a student project.",
+    "firebaseGuestNotice": "Your order will be sent to the store and we will contact you to confirm it. There is no online payment — you pay on delivery.",
     "guestNote": "You are checking out as a guest. To see the order in your account,",
     "submitError": "Could not save the order. Check your connection and try again.",
     "cashNote": "Pay in cash when you receive the order. The order will get the “Awaiting payment” status.",
@@ -335,6 +336,18 @@
       "chooseVolume": "Choose another size in cart",
       "confirmNew": "Confirm order at new prices",
       "verifyError": "We couldn’t check that the items are still up to date. Your order was not placed — check your connection and try again."
+    },
+    "errors": {
+      "promoInvalid": "This promo code is not valid. Remove it or enter another one.",
+      "promoMinTotal": "This promo code applies to orders from {{min}} som.",
+      "promoUsed": "This promo code has already been used.",
+      "sessionExpired": "Your sign-in session has expired. Please sign in again — your cart is saved.",
+      "verification": "We could not verify that the request came from your browser. Refresh the page and try again, or contact us by phone.",
+      "rateLimited": "Too many checkout attempts. Please try again in {{minutes}} min.",
+      "unavailable": "Checkout is temporarily unavailable. Please try later or contact us by phone.",
+      "invalid": "Please check your order details and try again.",
+      "conflict": "This order is already being sent. Refresh the page and check the result.",
+      "network": "We could not send your order. Check your internet connection and try again — your cart is saved."
     }
   },
   "delivery": {
@@ -398,7 +411,10 @@
   "validation": {
     "required": "Please fill in this field.",
     "email": "Enter a valid email address, e.g. name@mail.com.",
-    "phone": "Enter a number like +996 700 123 456 or 0700 123 456.",
+    "phone": "Enter the 9 digits of your number after +996 (without a leading 0).",
+    "phoneInvalid": "The number contains letters or invalid characters. Enter digits only.",
+    "phoneForeign": "Only Kyrgyzstan numbers (+996) are accepted.",
+    "phoneTooLong": "The number is too long: there must be 9 digits after +996. Please check it.",
     "passwordMin": "Password must be at least 6 characters.",
     "passwordMatch": "Passwords do not match.",
     "nameMin": "Name must be at least 2 characters.",
@@ -433,7 +449,34 @@
     "demoUserNotFound": "No demo user with this email in this browser. Please register first.",
     "tooManyRequests": "Too many attempts. Try again later.",
     "network": "No connection to the server. Check your internet.",
-    "unknown": "The action failed. Please try again."
+    "unknown": "The action failed. Please try again.",
+    "google": {
+      "continue": "Continue with Google",
+      "or": "or",
+      "consent": "By continuing with Google, you agree to the store rules and data processing.",
+      "cancelled": "Google sign-in was cancelled.",
+      "popupBlocked": "Your browser blocked the Google window. Allow pop-ups for this site and try again.",
+      "accountExists": "An account with this email already exists. Sign in the way you registered before (email and password).",
+      "notEnabled": "Google sign-in is not available right now. Please sign in with email and password.",
+      "unauthorizedDomain": "Google sign-in is not set up for this site address. Please sign in with email and password.",
+      "userDisabled": "This account has been disabled. Please contact the store.",
+      "unavailable": "Google sign-in works only when Firebase is connected.",
+      "profileFailed": "Your profile could not be saved. Sign-in was cancelled — please try again."
+    },
+    "reset": {
+      "link": "Forgot password?",
+      "title": "Reset your password",
+      "subtitle": "Enter the email you registered with. We will send you a link to set a new password.",
+      "submit": "Send email",
+      "sending": "Sending…",
+      "sentTitle": "Check your inbox",
+      "sentText": "If an account with {{email}} exists, we have sent it an email with a link to reset the password.",
+      "sentHint": "No email? Check your spam folder or send it again in a minute. Your account, orders and details stay the same — only the password changes.",
+      "backToLogin": "Back to sign in",
+      "again": "Send again",
+      "remembered": "Remembered your password?",
+      "unavailable": "Password reset works only when Firebase is connected."
+    }
   },
   "account": {
     "title": "My account",
@@ -468,7 +511,9 @@
     "recipient": "Recipient",
     "continue": "Continue shopping",
     "toAccount": "Go to my account",
-    "notFound": "Order not found"
+    "notFound": "Order not found",
+    "serverText": "Your order has been received. We will contact you to confirm it. There is no online payment — you pay on delivery.",
+    "cardDemoNote": "No online card payment is made: your card details were not sent anywhere. Please pay on delivery."
   },
   "quiz": {
     "title": "Scent finder",
@@ -567,7 +612,7 @@
     "hours": "Opening hours",
     "hoursValue": "Daily 10:00–20:00",
     "phone": "Phone",
-    "phoneValue": "+996 504889991",
+    "phoneValue": "+996 504 889 991",
     "email": "Email",
     "emailValue": "aytolgonmalikov@gmail.com",
     "infoDemo": "These contacts are for demonstration and do not belong to a real store.",
@@ -704,11 +749,11 @@
     "holder": "Cardholder name",
     "number": "Card number",
     "expiry": "Expiry date (MM/YY)",
-    "demoMode": "DEMO MODE — no real money is charged",
+    "demoMode": "DEMO MODE — no online payment, card details are not sent. Pay on delivery.",
     "confirm": "Confirm payment (DEMO)",
     "cancel": "Cancel",
-    "successTitle": "Demo payment successful",
-    "successText": "{{amount}} was “paid” in demo mode. No money was charged.",
+    "successTitle": "Demo form completed",
+    "successText": "{{amount}} was not charged: there is no online payment. Please pay on delivery.",
     "placingOrder": "Placing your order…"
   },
   "paymentStatus": {
@@ -740,6 +785,8 @@
     "checkError": "Could not verify administrator rights. Please check your internet connection.",
     "deniedTitle": "Access denied",
     "deniedText": "The account {{email}} has no administrator rights. If this is a mistake, contact the shop owner.",
+    "deniedUidLabel": "Your UID",
+    "deniedUidHint": "To get access, send this UID to the store’s primary administrator. Click the UID to select it for copying.",
     "unavailableTitle": "Admin panel unavailable",
     "unavailableText": "The site is running in demo mode without Firebase. The admin panel requires Firebase: administrator rights are verified on the server.",
     "soon": "Soon",
@@ -772,8 +819,8 @@
     },
     "ready": "Ready",
     "orders": {
-      "subtitle": "Orders from registered customers. Newest first.",
-      "guestNote": "Guest orders (placed without signing in) are stored only in the customer's browser and sent to Telegram — they are not shown here yet.",
+      "subtitle": "Orders from registered customers and guests. Newest first.",
+      "guestNote": "Guest orders (placed without signing in) are marked “Guest”. Their status is changed the same way as for regular orders.",
       "refresh": "Refresh",
       "filterLabel": "Filter by status",
       "all": "All",
@@ -805,7 +852,53 @@
         "failed": "Could not load data. Please try again.",
         "network": "No internet connection.",
         "denied": "Access denied. Make sure the stage 3 Firestore rules are published and sign in again.",
-        "not-configured": "Firebase is not configured."
+        "not-configured": "Firebase is not configured.",
+        "guest-status-rules": "No permission to change the status of a guest order. Check that the current Firestore rules are published in Firebase, then sign in again.",
+        "notify-already_sent": "The notification has already been sent — no resend needed.",
+        "notify-in_progress": "The notification is already being sent. Refresh the page in a minute.",
+        "notify-not_needed": "This order does not need a resend.",
+        "notify-not_found": "Order not found.",
+        "notify-not_admin": "You do not have admin rights.",
+        "notify-auth_invalid": "Your session has expired. Please sign in again.",
+        "notify-not_configured": "The notification server is not configured.",
+        "not-signed-in": "Sign in with an admin account."
+      },
+      "searchLabel": "Search",
+      "searchPlaceholder": "Number, name or phone",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "sortLabel": "Sort",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "totalDesc": "Total: high to low",
+        "totalAsc": "Total: low to high"
+      },
+      "found": "Found: {{count}} of {{total}}",
+      "emptySearch": "No orders match this search.",
+      "guest": "Guest",
+      "notify": {
+        "title": "Telegram notification",
+        "status": "Status",
+        "statuses": {
+          "pending": "Waiting to be sent",
+          "sending": "Sending",
+          "sent": "Sent",
+          "failed": "Not sent"
+        },
+        "attempts": "Attempts",
+        "sentAt": "Sent at",
+        "lastError": "Last error",
+        "legacy": "This order was placed before notifications existed — no delivery data.",
+        "resend": "Send again",
+        "confirm": "Send the notification for order {{id}} to Telegram again?",
+        "confirmSend": "Yes, send",
+        "cancel": "Cancel",
+        "result": {
+          "sent": "Notification sent.",
+          "failed": "Could not send the notification. Please try later.",
+          "in_progress": "The notification is already being sent. Refresh the page in a minute."
+        }
       }
     },
     "customers": {
@@ -1104,6 +1197,270 @@
         "network": "No internet connection. Changes were not saved — please try again.",
         "not-configured": "Firebase is not connected.",
         "failed": "Could not save the product. Please try again."
+      }
+    },
+    "reviews": {
+      "subtitle": "Customer review moderation: approve, reject and delete.",
+      "publicNote": "Only approved reviews are shown on the site — they appear on the Reviews page right away and count towards the average rating.",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing…",
+      "filterLabel": "Review status",
+      "status": {
+        "all": "All",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "statusBadge": {
+        "pending": "Awaiting moderation",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "statusHint": {
+        "pending": "Not visible on the site — awaiting a decision.",
+        "approved": "Shown on the site and counted in the average rating.",
+        "rejected": "Not shown on the site. It can be deleted permanently."
+      },
+      "searchLabel": "Search reviews",
+      "searchPlaceholder": "Name or review text",
+      "ratingLabel": "Rating",
+      "ratingAll": "Any",
+      "ratingOption": "{{rating}} of 5",
+      "ratingValue": "Rated {{rating}} of 5",
+      "sortLabel": "Sort",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first"
+      },
+      "reset": "Reset",
+      "found": "Showing {{count}} of {{total}}",
+      "col": {
+        "author": "Author",
+        "rating": "Rating",
+        "text": "Review",
+        "lang": "Language",
+        "created": "Date",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "lang": {
+        "ru": "Русский",
+        "ky": "Кыргызча",
+        "en": "English",
+        "unknown": "Not specified"
+      },
+      "noDate": "Date unknown",
+      "moderatedAt": "Decision: {{date}}",
+      "notModerated": "Not moderated yet",
+      "showMore": "Show full text",
+      "showLess": "Collapse",
+      "action": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "pending": "Return to pending",
+        "delete": "Delete permanently"
+      },
+      "actionLabel": {
+        "approve": "Approve review: {{name}}",
+        "reject": "Reject review: {{name}}",
+        "pending": "Return review to pending: {{name}}",
+        "delete": "Delete review permanently: {{name}}"
+      },
+      "busy": {
+        "approve": "Approving…",
+        "reject": "Rejecting…",
+        "pending": "Returning…"
+      },
+      "done": {
+        "approved": "Review by “{{name}}” approved and shown on the site.",
+        "rejected": "Review by “{{name}}” rejected and hidden from the site.",
+        "pending": "Review by “{{name}}” returned to pending and hidden from the site."
+      },
+      "unchanged": "The review by “{{name}}” already has this status — nothing changed. The row has been refreshed.",
+      "deleteOnlyRejected": "Only a rejected review can be deleted permanently. Reject it first.",
+      "limited": "Showing the latest {{count}} reviews. Older reviews are not loaded here.",
+      "damagedTitle": "Damaged documents: {{count}}",
+      "damagedText": "These documents are not shown in the list: they have invalid or missing fields. Check them in the Firebase Console.",
+      "empty": "No reviews yet",
+      "emptyText": "When customers leave reviews, they will appear here with the “Awaiting moderation” status.",
+      "emptyStatus": {
+        "all": "No reviews",
+        "pending": "No reviews awaiting moderation",
+        "approved": "No approved reviews",
+        "rejected": "No rejected reviews"
+      },
+      "emptyFiltered": "Nothing found",
+      "emptyFilteredText": "Change the search or rating, or reset the filters.",
+      "closeMessage": "Close message",
+      "errors": {
+        "failed": "Could not load reviews. Please try again.",
+        "network": "No internet connection.",
+        "denied": "Access denied. Make sure the stage D Firestore rules are published and sign in again.",
+        "not-configured": "Firebase is not configured."
+      },
+      "actionErrors": {
+        "conflict": "The review by “{{name}}” has already been moderated in another window or by another administrator. The row has been refreshed — check the status and try again.",
+        "not-found": "The review by “{{name}}” was not found — it may have been deleted. It has been removed from the list.",
+        "invalid": "Could not change the status of the review by “{{name}}”: unknown status. Refresh the list.",
+        "denied": "No permission to change the review by “{{name}}”. Make sure the stage D Firestore rules are published and sign in again.",
+        "network": "No internet connection. The status of the review by “{{name}}” was not changed.",
+        "not-configured": "Firebase is not configured.",
+        "failed": "Could not change the status of the review by “{{name}}”. Please try again."
+      },
+      "delete": {
+        "title": "Delete this review permanently?",
+        "text": "The document will be deleted from Firestore. This cannot be undone — the review can only be restored manually from a JSON copy.",
+        "author": "Author",
+        "rating": "Rating",
+        "created": "Date",
+        "factPublic": "The review is rejected: it is not shown on the site and does not count towards the average rating — deleting it will not change the site.",
+        "stepBackup": "Download a JSON copy of the review — it cannot be deleted without one.",
+        "download": "Download JSON copy",
+        "downloadAgain": "Download again",
+        "downloaded": "Copy downloaded: {{file}}",
+        "confirmCheck": "I understand that the review will be deleted and cannot be restored",
+        "needBackup": "To delete the review, download the JSON copy first.",
+        "needCheck": "Tick the checkbox above to enable the delete button.",
+        "cancel": "Cancel",
+        "confirm": "Delete permanently",
+        "deleting": "Deleting…",
+        "done": "The review by “{{name}}” has been deleted permanently.",
+        "errors": {
+          "not-rejected": "The review is no longer rejected — it was returned to pending or approved in another window. Nothing was deleted. The list has been refreshed.",
+          "not-found": "The review is no longer in Firestore — it may have been deleted in another window.",
+          "denied": "No permission to delete the review. Make sure the stage D Firestore rules are published and sign in again.",
+          "network": "No internet connection. The review was not deleted — check the connection and try again.",
+          "not-configured": "Firebase is not configured.",
+          "failed": "Could not delete the review. Please try again."
+        }
+      }
+    },
+    "admins": {
+      "subtitle": "Who can work in the admin panel and who manages access.",
+      "ownerOnlyNote": "Only the primary administrator can add and remove administrators and hand over the primary role.",
+      "loading": "Loading administrators…",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing…",
+      "closeMessage": "Close message",
+      "roles": {
+        "owner": "Primary administrator",
+        "admin": "Administrator",
+        "pending": "Role handover pending"
+      },
+      "roleHint": {
+        "owner": "Manages administrators and can hand over this role to another administrator.",
+        "admin": "Works in the admin panel sections but does not manage access.",
+        "pending": "This administrator has been offered the primary role. It moves over only once they accept it themselves."
+      },
+      "list": {
+        "title": "Administrators",
+        "count": "Total: {{count}}",
+        "you": "You",
+        "noLabel": "No label",
+        "grantedAtLabel": "Access granted",
+        "grantedAtUnknown": "Date unknown",
+        "grantedByLabel": "Granted by",
+        "grantedBy": "Administrator with UID {{uid}}",
+        "grantedByYou": "You",
+        "grantedByConsole": "Manually in the Firebase Console",
+        "legacy": "Older record",
+        "legacyHint": "Access was granted before this section existed. The record works as usual.",
+        "empty": "No administrators yet",
+        "emptyText": "Add an administrator by their account UID."
+      },
+      "uid": {
+        "label": "UID",
+        "fieldLabel": "User UID",
+        "hint": "The UID is the account ID in Firebase Authentication. Ask the person to send you their UID — administrators can’t be added by email.",
+        "placeholder": "For example, a1B2c3D4e5F6g7H8i9J0",
+        "required": "Enter the user’s UID.",
+        "invalid": "A UID may contain only Latin letters, digits, “_” and “-”, up to 128 characters."
+      },
+      "grant": {
+        "title": "Add an administrator",
+        "text": "The person must have an account on the site. They will get access to every panel section except administrator management.",
+        "labelLabel": "Label (optional)",
+        "labelHint": "Shown only in this list — for example, “Manager”. Up to 100 characters.",
+        "submit": "Grant access",
+        "submitting": "Granting access…",
+        "done": "Administrator access granted: {{name}}."
+      },
+      "revoke": {
+        "action": "Remove access",
+        "actionLabel": "Remove access: {{name}}",
+        "title": "Remove administrator access?",
+        "text": "{{name}} will no longer be able to use the admin panel. Access ends immediately.",
+        "factAccount": "Their account, orders and reviews stay as they are.",
+        "factRestore": "You can restore access by adding them again by UID.",
+        "confirmCheck": "I understand that {{name}} will lose access to the admin panel",
+        "confirm": "Remove access",
+        "confirming": "Removing…",
+        "done": "Access removed: {{name}}.",
+        "blocked": {
+          "self": "You can’t remove your own access.",
+          "owner": "The primary administrator’s access can’t be removed.",
+          "pending": "This administrator has been offered the primary role. Cancel the offer first."
+        }
+      },
+      "transfer": {
+        "offerAction": "Hand over primary role",
+        "offerActionLabel": "Offer the primary administrator role to {{name}}",
+        "offerTitle": "Hand over the primary administrator role?",
+        "offerText": "You are offering the primary administrator role to {{name}}. The role moves over only when they sign in to the panel and accept the offer themselves.",
+        "factAfter": "Once they accept, you become a regular administrator: you keep access to the panel sections but can no longer manage administrators.",
+        "factCancel": "You can cancel the offer until it is accepted.",
+        "factOne": "Only one offer can be active at a time.",
+        "offerConfirmCheck": "I understand that I will no longer be the primary administrator once the offer is accepted",
+        "offerConfirm": "Send offer",
+        "offering": "Sending…",
+        "offerDone": "Offer sent to {{name}}. The role moves over once they accept.",
+        "outgoingTitle": "Role handover awaiting reply",
+        "outgoingText": "You offered the primary administrator role to {{name}}. Until they accept, you remain the primary administrator.",
+        "cancelAction": "Cancel offer",
+        "cancelling": "Cancelling…",
+        "cancelDone": "Offer cancelled.",
+        "incomingTitle": "You have been offered the primary administrator role",
+        "incomingText": "Offer from the primary administrator: {{name}}. If you accept, you will be able to add and remove administrators.",
+        "openOffer": "Open the offer",
+        "acceptAction": "Accept role",
+        "accepting": "Accepting…",
+        "acceptDone": "You are now the primary administrator.",
+        "declineAction": "Decline",
+        "declining": "Declining…",
+        "declineDone": "You declined the offer.",
+        "acceptTitle": "Accept the primary administrator role?",
+        "acceptText": "You will become the primary administrator in place of {{name}}.",
+        "factAcceptPrevious": "The previous primary administrator stays on as a regular administrator.",
+        "factAcceptLater": "You can pass the role on later only the same way — by offering it to another administrator.",
+        "acceptConfirmCheck": "I understand that I am becoming the primary administrator and am responsible for panel access",
+        "acceptConfirm": "Accept role"
+      },
+      "dialog": {
+        "cancel": "Cancel"
+      },
+      "access": {
+        "ownerOnlyTitle": "Primary administrator only",
+        "ownerOnlyText": "Only the primary administrator can see the administrator list and manage access. The other panel sections are available to you as usual."
+      },
+      "errors": {
+        "not-signed-in": "You are not signed in. Please sign in again.",
+        "invalid-uid": "Check the UID: only Latin letters, digits, “_” and “-” are allowed, up to 128 characters.",
+        "invalid-label": "The label must be 100 characters or fewer.",
+        "not-owner": "Only the primary administrator can do this.",
+        "self": "You can’t do this for your own account.",
+        "user-not-found": "No user with this UID was found. They need to sign up on the site first.",
+        "already-admin": "This user is already an administrator.",
+        "not-admin": "This user doesn’t have administrator access — it may already have been removed. Refresh the list.",
+        "owner-protected": "The primary administrator’s access can’t be removed.",
+        "pending-owner": "This administrator has been offered the primary role. Cancel the offer first.",
+        "offer-exists": "An offer has already been sent. Cancel it to offer the role to another administrator.",
+        "no-offer": "There is no active offer — it may have been cancelled or declined. Refresh the page.",
+        "offer-stale": "The offer changed while this page was open. Nothing was changed — refresh the page.",
+        "candidate-not-admin": "The primary role can only be offered to a current administrator.",
+        "denied": "Firebase rejected the action: insufficient permissions. Refresh the page or sign in again.",
+        "network": "No internet connection. Nothing was changed.",
+        "not-configured": "Firebase is not configured.",
+        "failed": "The action could not be completed. Please try again."
       }
     }
   }

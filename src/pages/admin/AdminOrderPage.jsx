@@ -6,29 +6,40 @@ import Icon from '../../components/common/Icon';
 import EmptyState from '../../components/common/EmptyState';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { fetchOrder, updateOrderStatus } from '../../services/adminService';
+import { fetchOrder, resendOrderNotification, updateOrderStatus } from '../../services/adminService';
+import { canResendNotification } from '../../utils/adminOrders';
 import { notify } from '../../features/notifications/notificationsSlice';
 import { ORDER_STATUSES } from '../../utils/orderStatus';
 import { formatDate, formatPrice } from '../../utils/format';
+import { displayPhone } from '../../utils/phone';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
-/** Подробности заказа users/{userId}/orders/{orderId} и смена его статуса */
+/**
+ * Подробности заказа и смена его статуса: покупатель — users/{userId}/orders/{orderId},
+ * гость — guests/{guestKey}/orders/{orderId} (адрес /admin/orders/guest/:guestKey/:orderId).
+ * Уведомление в Telegram: статус и ручная повторная отправка (только при сбое, с подтверждением).
+ */
 export default function AdminOrderPage() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
-  const { userId, orderId } = useParams();
+  const { userId, guestKey, orderId } = useParams();
+  const kind = guestKey ? 'guest' : 'user';
+  const ownerId = guestKey || userId;
   const [order, setOrder] = useState(undefined); // undefined — загрузка, null — не найден
   const [error, setError] = useState(null);
   const [nextStatus, setNextStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [confirmResend, setConfirmResend] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendResult, setResendResult] = useState(null); // { ok, key }
   useDocumentTitle(`${t('admin.orders.order')} ${orderId} — ${t('admin.title')}`);
 
   const load = useCallback(() => {
     let cancelled = false;
     setError(null);
     setOrder(undefined);
-    fetchOrder(userId, orderId)
+    fetchOrder({ kind, ownerId, orderId })
       .then((o) => {
         if (cancelled) return;
         setOrder(o);
@@ -38,7 +49,7 @@ export default function AdminOrderPage() {
     return () => {
       cancelled = true;
     };
-  }, [userId, orderId]);
+  }, [kind, ownerId, orderId]);
 
   useEffect(() => load(), [load]);
 
@@ -68,6 +79,8 @@ export default function AdminOrderPage() {
 
   const lang = i18n.resolvedLanguage;
   const { customer = {}, shipping = {} } = order;
+  // Номер в заказе не меняется — только вид на экране (+996 700 123 456 для однозначных кыргызских номеров)
+  const phone = displayPhone(customer.phone);
   const address =
     shipping.method === 'pickup'
       ? null
@@ -82,13 +95,29 @@ export default function AdminOrderPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      await updateOrderStatus(userId, order.id, nextStatus);
+      await updateOrderStatus({ kind, ownerId, orderId: order.id }, nextStatus);
       setOrder({ ...order, status: nextStatus, statusUpdatedAt: new Date().toISOString() });
       dispatch(notify({ message: 'admin.orders.statusSaved', params: { id: order.id } }));
     } catch (err) {
       setSaveError(err.code || 'failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const notification = order.notification || null;
+  const handleResend = async () => {
+    setResending(true);
+    setResendResult(null);
+    try {
+      const status = await resendOrderNotification({ kind, ownerId, orderId: order.id });
+      setOrder((o) => ({ ...o, notification: { ...(o.notification || {}), status: status === 'in_progress' ? 'sending' : status } }));
+      setResendResult({ ok: status === 'sent', key: `admin.orders.notify.result.${status}` });
+    } catch (err) {
+      setResendResult({ ok: false, key: `admin.orders.errors.${err.code}` });
+    } finally {
+      setResending(false);
+      setConfirmResend(false);
     }
   };
 
@@ -99,6 +128,7 @@ export default function AdminOrderPage() {
         <div>
           <h1>
             {t('admin.orders.order')} № {order.id}
+            {order.isGuest && <span className="admin-badge admin-badge--guest">{t('admin.orders.guest')}</span>}
           </h1>
           <p>{formatDate(order.createdAt, lang)}</p>
         </div>
@@ -137,6 +167,65 @@ export default function AdminOrderPage() {
           )}
         </section>
 
+        <section className="admin-panel card admin-order-notify" aria-labelledby="order-notify-title">
+          <h2 id="order-notify-title">{t('admin.orders.notify.title')}</h2>
+          {notification ? (
+            <dl className="admin-dl">
+              <div>
+                <dt>{t('admin.orders.notify.status')}</dt>
+                <dd>
+                  <span className={`admin-badge admin-notify admin-notify--${notification.status}`}>
+                    {t(`admin.orders.notify.statuses.${notification.status}`, notification.status)}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>{t('admin.orders.notify.attempts')}</dt>
+                <dd>{Number(notification.attempts) || 0}</dd>
+              </div>
+              {notification.sentAt && (
+                <div>
+                  <dt>{t('admin.orders.notify.sentAt')}</dt>
+                  <dd>{formatDate(notification.sentAt, lang)}</dd>
+                </div>
+              )}
+              {notification.status === 'failed' && notification.lastError && (
+                <div>
+                  <dt>{t('admin.orders.notify.lastError')}</dt>
+                  <dd>
+                    <code>{notification.lastError}</code>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          ) : (
+            <p className="admin-muted">{t('admin.orders.notify.legacy')}</p>
+          )}
+          {canResendNotification(notification) && !confirmResend && (
+            <button type="button" className="btn btn--outline btn--sm" onClick={() => setConfirmResend(true)} disabled={resending}>
+              <Icon name="refresh" size={16} /> {t('admin.orders.notify.resend')}
+            </button>
+          )}
+          {confirmResend && (
+            <div className="admin-order-notify__confirm" role="group" aria-labelledby="order-notify-confirm">
+              <p id="order-notify-confirm">{t('admin.orders.notify.confirm', { id: order.id })}</p>
+              <div className="admin-order-notify__actions">
+                <button type="button" className="btn btn--primary btn--sm" onClick={handleResend} disabled={resending} aria-busy={resending || undefined}>
+                  {resending ? <LoadingSpinner size="sm" /> : <Icon name="check" size={16} />} {t('admin.orders.notify.confirmSend')}
+                </button>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmResend(false)} disabled={resending}>
+                  {t('admin.orders.notify.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+          {resendResult && (
+            <p className={resendResult.ok ? 'admin-order-notify__ok' : 'form__error'} role={resendResult.ok ? 'status' : 'alert'}>
+              {t(resendResult.key, t('admin.orders.errors.failed'))}
+            </p>
+          )}
+        </section>
+
         <section className="admin-panel card">
           <h2>{t('admin.orders.customer')}</h2>
           <dl className="admin-dl">
@@ -146,7 +235,7 @@ export default function AdminOrderPage() {
             </div>
             <div>
               <dt>{t('admin.orders.phone')}</dt>
-              <dd>{customer.phone ? <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`}>{customer.phone}</a> : '—'}</dd>
+              <dd>{phone.text ? phone.href ? <a href={phone.href}>{phone.text}</a> : phone.text : '—'}</dd>
             </div>
             <div>
               <dt>{t('admin.orders.email')}</dt>

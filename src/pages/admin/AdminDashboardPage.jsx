@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/common/Icon';
-import { ADMIN_SECTIONS } from '../../components/admin/adminSections';
+import { ADMIN_SECTIONS, isSectionVisible } from '../../components/admin/adminSections';
+import OwnerTransferNotice from '../../components/admin/OwnerTransferNotice';
+import { useOwnerAccess } from '../../hooks/useOwnerAccess';
+import { shortUid } from '../../utils/adminAdmins';
 import { selectProducts, selectProductsSource, selectProductsStatus } from '../../features/products/productsSlice';
 import { selectUser } from '../../features/user/userSlice';
 import { fetchReviewStats } from '../../services/reviewsService';
@@ -39,6 +42,7 @@ export default function AdminDashboardPage() {
   const [ordersCount, setOrdersCount] = useState(null); // null — загрузка, false — ошибка
   const [customersCount, setCustomersCount] = useState(null); // null — загрузка, false — ошибка
   useDocumentTitle(t('admin.dashboard.title'));
+  const { access, config } = useOwnerAccess();
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +74,15 @@ export default function AdminDashboardPage() {
         <p>{t('admin.dashboard.greeting', { name: user?.name })}</p>
       </div>
 
+      {/* Кандидату предложена роль главного администратора: пункта меню у него нет — ссылка здесь */}
+      {access === 'pending' && (
+        <OwnerTransferNotice direction="incoming" name={shortUid(config?.ownerUid)} uid={config?.ownerUid}>
+          <Link to="/admin/admins" className="btn btn--primary btn--sm">
+            {t('admin.admins.transfer.openOffer')}
+          </Link>
+        </OwnerTransferNotice>
+      )}
+
       <div className="admin-stats">
         <StatCard
           icon="drop"
@@ -95,7 +108,7 @@ export default function AdminDashboardPage() {
       <section className="admin-panel card">
         <h2>{t('admin.dashboard.sections')}</h2>
         <ul className="admin-roadmap">
-          {ADMIN_SECTIONS.map((s) => (
+          {ADMIN_SECTIONS.filter((s) => isSectionVisible(s, access)).map((s) => (
             <li key={s.path}>
               <Link to={`/admin/${s.path}`}>
                 <Icon name={s.icon} size={18} /> {t(`admin.nav.${s.path}`)}

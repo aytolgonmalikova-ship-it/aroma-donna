@@ -1,22 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import FormField from '../common/FormField';
+import PhoneField from '../common/PhoneField';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { DELIVERY_METHODS } from '../../utils/promo';
 import { formatPrice } from '../../utils/format';
 import { hasErrors, validateCheckout } from '../../utils/validation';
+// Регионы Кыргызстана и города, в которые доставляем — общий модуль (его же использует проверка заказа)
+import { REGIONS } from '../../data/regions';
 
-// Регионы Кыргызстана и города, в которые доставляем
-const REGIONS = {
-  bishkek: ['bishkek'],
-  chui: ['tokmok'],
-  osh: ['osh'],
-  jalalabad: ['jalalabad'],
-  issykkul: ['karakol', 'cholponata'],
-  naryn: ['naryn'],
-  talas: ['talas'],
-  batken: ['batken'],
-};
 // Способы оплаты: наличными курьеру или DEMO-оплата картой (через модальное окно)
 export const PAYMENT_METHODS = ['cashOnDelivery', 'cardDemo'];
 
@@ -100,18 +92,7 @@ export default function CheckoutForm({ initialValues, deliveryMethod, onDelivery
           />
         </div>
         <div className="form__row">
-          <FormField
-            id="co-phone"
-            name="phone"
-            type="tel"
-            label={t('form.phone')}
-            placeholder="+996 700 123 456"
-            autoComplete="tel"
-            value={values.phone}
-            onChange={handleChange}
-            error={errors.phone}
-            required
-          />
+          <PhoneField id="co-phone" name="phone" label={t('form.phone')} value={values.phone} onChange={handleChange} error={errors.phone} required />
           <FormField id="co-email" name="email" type="email" label={t('form.email')} autoComplete="email" value={values.email} onChange={handleChange} error={errors.email} required />
         </div>
       </fieldset>

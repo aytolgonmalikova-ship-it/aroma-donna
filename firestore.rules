@@ -1,9 +1,11 @@
 rules_version = '2';
 
 // Правила безопасности Firestore для AROMA DONNA.
-// Каждый пользователь может читать и изменять ТОЛЬКО свой профиль и свои заказы.
+// Каждый пользователь может читать и изменять ТОЛЬКО свой профиль и читать свои заказы
+// (заказы создаёт только сервер /api/order через Admin SDK).
 // Администратор (документ admins/{uid}) может читать профили покупателей и все заказы
-// и менять только статус заказа, а также управлять каталогом products (этап 5а).
+// и менять только статус заказа, управлять каталогом products (этап 5а) и модерировать отзывы.
+// Главный администратор (adminConfig/primary.ownerUid) дополнительно управляет администраторами (этап A3).
 // Проверка выполняется на стороне сервера Firebase, а не только в интерфейсе.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -17,10 +19,12 @@ service cloud.firestore {
     }
 
     // Администратор — тот, у кого есть документ admins/{uid}.
-    // Создать такой документ из браузера нельзя (см. правило admins ниже):
-    // только вручную в Firebase Console или сервером через Firebase Admin SDK.
-    // Даёт права: чтение всех заказов и смена их статуса (этап 3), чтение профилей users (этап 4),
-    // чтение и запись товаров products (этап 5а).
+    // Из браузера такой документ может создать только главный администратор (правило admins ниже);
+    // первого администратора и adminConfig/primary создают вручную в Firebase Console.
+    // Даёт права в разделах админ-панели: чтение всех заказов и смена их статуса (этап 3),
+    // чтение профилей users (этап 4), чтение и запись товаров products, удаление только скрытых (этап 5),
+    // чтение всех отзывов, смена их статуса и удаление отклонённых (этап D).
+    // Управлять администраторами isAdmin() не даёт — для этого нужен isPrimaryOwner() (этап A3).
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -51,32 +55,38 @@ service cloud.firestore {
 
       // Заказы пользователя: users/{uid}/orders/{orderId}
       // (чтение всех заказов администратором — правило collection group ниже)
+      // Создаёт заказы ТОЛЬКО сервер (/api/order, Firebase Admin SDK — правила его не ограничивают):
+      // цены, итог, статусы и номер считает сервер. Из браузера создать заказ нельзя (C3.3, этап 6).
       match /orders/{orderId} {
         allow read: if isOwner(userId);
-        // Создавать можно только свой заказ с корректной суммой и статусом «Новый»
-        allow create: if isOwner(userId)
-                      && request.resource.data.id == orderId
-                      && request.resource.data.userId == userId
-                      && request.resource.data.total is number
-                      && request.resource.data.total >= 0
-                      && request.resource.data.items is list
-                      && request.resource.data.items.size() > 0
-                      && request.resource.data.status == 'new';
+        allow create: if false;
         // Изменять может только администратор и только статус; покупатель — ничего
         allow update: if isAdmin() && isValidOrderStatusChange();
         allow delete: if false;
       }
     }
 
-    // Все заказы для админ-панели: запрос collectionGroup('orders').
-    // Только чтение и только администратору. Запись по-прежнему проверяется правилом выше.
+    // Гостевые заказы: guests/{guestKey}/orders/{orderId} (C3.3).
+    // guestKey — HMAC гостевой сессии, а не UID: гость не входит в аккаунт и не читает заказ через Firestore.
+    // Создаёт и обновляет уведомление только сервер (Admin SDK). Читает только администратор —
+    // правило collection group ниже. Администратор (владелец или обычный) меняет только статус —
+    // та же проверка изменённых полей, что у заказов покупателей. Сам документ guests/{guestKey}
+    // и прочие подколлекции закрыты общим запретом в конце файла.
+    match /guests/{guestKey}/orders/{orderId} {
+      allow create, delete: if false;
+      allow update: if isAdmin() && isValidOrderStatusChange();
+    }
+
+    // Все заказы для админ-панели (покупателей и гостей): запрос collectionGroup('orders').
+    // Только чтение и только администратору. Запись проверяется правилами выше.
     match /{path=**}/orders/{orderId} {
       allow read: if isAdmin();
     }
 
     // Смена статуса: меняются только поля status и statusUpdatedAt,
     // статус — из списка (тот же список в src/utils/orderStatus.js),
-    // время ставит сервер (serverTimestamp). Состав, сумму, адрес и т.п. изменить нельзя.
+    // время ставит сервер (serverTimestamp). Состав, сумму, цены, адрес, оплату, userId, номер,
+    // дату, customerType и уведомление (notification) изменить нельзя.
     function isValidOrderStatusChange() {
       return request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['status', 'statusUpdatedAt'])
@@ -84,13 +94,144 @@ service cloud.firestore {
           && request.resource.data.statusUpdatedAt == request.time;
     }
 
+    // ---------- Администраторы: роли owner и admin (этап A3) ----------
+    // admin — любой, у кого есть документ admins/{uid} (isAdmin(), права в разделах не меняются).
+    // owner — главный администратор: его UID хранится в ОДНОМ документе adminConfig/primary (ownerUid),
+    // поэтому владелец всегда ровно один. Поле role в admins/{uid} правами не является и не проверяется.
+    // Управлять администраторами может только владелец. adminConfig/primary создаётся вручную
+    // в Firebase Console; пока его нет, управлять ролями не может никто (остальные разделы работают).
+    // Firebase Console и Admin SDK правила не проверяют.
+
+    function adminConfig() {
+      return get(/databases/$(database)/documents/adminConfig/primary).data;
+    }
+
+    // adminConfig/primary ПОСЛЕ текущей записи — с учётом всех записей того же пакета (writeBatch)
+    // или транзакции. Для одиночной записи в другой документ совпадает с adminConfig().
+    function adminConfigAfter() {
+      return getAfter(/databases/$(database)/documents/adminConfig/primary).data;
+    }
+
+    // Главный администратор: администратор, чей UID записан в adminConfig/primary.ownerUid
+    function isPrimaryOwner() {
+      return isAdmin() && adminConfig().ownerUid == request.auth.uid;
+    }
+
+    // Firebase Auth UID: 1–128 символов, только латиница, цифры, «_» и «-»
+    function isUid(value) {
+      return value is string && value.matches('^[A-Za-z0-9_-]{1,128}$');
+    }
+
     // Администраторы: admins/{uid}
-    // Пользователь может прочитать только СВОЙ документ — так интерфейс узнаёт, админ ли он.
-    // Список админов и любые изменения из браузера запрещены
-    // (Firebase Console и Admin SDK правила не проверяют).
     match /admins/{adminId} {
-      allow get: if isOwner(adminId);
-      allow list, create, update, delete: if false;
+      // Свой документ — любому вошедшему (так интерфейс узнаёт, админ ли он); чужие и список — только владельцу
+      allow get: if isOwner(adminId) || isPrimaryOwner();
+      allow list: if isPrimaryOwner();
+      // Новый администратор: только владелец, не себе, только зарегистрированный на сайте UID
+      // (профиль users/{uid} создаёт лишь сам владелец этого UID). Перезаписать существующий
+      // документ нельзя: для существующего документа это update, а он запрещён.
+      allow create: if isPrimaryOwner()
+                    && adminId != request.auth.uid
+                    && isUid(adminId)
+                    && exists(/databases/$(database)/documents/users/$(adminId))
+                    && isValidNewAdmin(request.resource.data);
+      allow update: if false;
+      // Отозвать доступ: только владелец и только у обычного администратора —
+      // не у себя, не у владельца и не у того, кому предложена роль владельца.
+      // Владелец и кандидат проверяются и до записи, и после всего пакета (getAfter): одним
+      // writeBatch нельзя предложить роль администратору и тут же отозвать его доступ.
+      allow delete: if isPrimaryOwner()
+                    && adminId != request.auth.uid
+                    && adminId != adminConfig().ownerUid
+                    && adminId != adminConfig().pendingOwnerUid
+                    && adminId != adminConfigAfter().ownerUid
+                    && adminId != adminConfigAfter().pendingOwnerUid;
+    }
+
+    function isValidNewAdmin(a) {
+      return a.keys().hasOnly(['grantedAt', 'grantedBy', 'label'])
+          && a.keys().hasAll(['grantedAt', 'grantedBy'])
+          && a.grantedAt == request.time
+          && a.grantedBy == request.auth.uid
+          && (!('label' in a)
+              || (a.label is string && a.label.size() >= 1 && a.label.size() <= 100
+                  && !a.label.matches('^\\s*$')));
+    }
+
+    // Главный администратор: adminConfig/primary — единственный документ.
+    // Создать и удалить его из браузера нельзя. Изменение — только одним из четырёх действий
+    // передачи роли; ownerUid меняется ТОЛЬКО при принятии действующего предложения
+    // самим назначенным администратором (и только пока он администратор).
+    match /adminConfig/{docId} {
+      allow get: if docId == 'primary'
+                 && isAdmin()
+                 && (resource.data.ownerUid == request.auth.uid
+                     || resource.data.pendingOwnerUid == request.auth.uid);
+      allow list, create, delete: if false;
+      allow update: if docId == 'primary'
+                    && isAdmin()
+                    && isValidAdminConfig(request.resource.data)
+                    && request.resource.data.updatedAt == request.time
+                    && request.resource.data.updatedBy == request.auth.uid
+                    && (isOfferOwnerTransfer()
+                        || isCancelOwnerTransfer()
+                        || isDeclineOwnerTransfer()
+                        || isAcceptOwnerTransfer());
+    }
+
+    // Точный набор полей; UID — строки нужного формата, pendingOwnerUid и previousOwnerUid — UID или null
+    function isValidAdminConfig(c) {
+      return c.keys().hasOnly(['ownerUid', 'pendingOwnerUid', 'previousOwnerUid', 'updatedAt', 'updatedBy'])
+          && c.keys().hasAll(['ownerUid', 'pendingOwnerUid', 'previousOwnerUid', 'updatedAt', 'updatedBy'])
+          && isUid(c.ownerUid)
+          && (c.pendingOwnerUid == null || isUid(c.pendingOwnerUid))
+          && (c.previousOwnerUid == null || isUid(c.previousOwnerUid));
+    }
+
+    // Предложить роль (или заменить предложение): только владелец, только администратору, не себе.
+    // existsAfter: кандидат должен остаться администратором и после всего пакета (writeBatch) —
+    // нельзя одним пакетом предложить роль и удалить его документ admins.
+    function isOfferOwnerTransfer() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.ownerUid == request.auth.uid
+          && after.ownerUid == before.ownerUid
+          && after.previousOwnerUid == before.previousOwnerUid
+          && after.pendingOwnerUid != null
+          && after.pendingOwnerUid != request.auth.uid
+          && existsAfter(/databases/$(database)/documents/admins/$(after.pendingOwnerUid));
+    }
+
+    // Отменить предложение: только владелец
+    function isCancelOwnerTransfer() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.ownerUid == request.auth.uid
+          && before.pendingOwnerUid != null
+          && after.pendingOwnerUid == null
+          && after.ownerUid == before.ownerUid
+          && after.previousOwnerUid == before.previousOwnerUid;
+    }
+
+    // Отклонить предложение: только тот, кому оно сделано
+    function isDeclineOwnerTransfer() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.pendingOwnerUid == request.auth.uid
+          && after.pendingOwnerUid == null
+          && after.ownerUid == before.ownerUid
+          && after.previousOwnerUid == before.previousOwnerUid;
+    }
+
+    // Принять роль: только тот, кому предложено, и только пока он администратор (isAdmin() в allow update).
+    // Одна запись: новый владелец получает роль, прежний становится обычным администратором.
+    function isAcceptOwnerTransfer() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.pendingOwnerUid == request.auth.uid
+          && after.ownerUid == request.auth.uid
+          && after.previousOwnerUid == before.ownerUid
+          && after.pendingOwnerUid == null;
     }
 
     // Отзывы покупателей: reviews/{reviewId} — модерация (этап D).

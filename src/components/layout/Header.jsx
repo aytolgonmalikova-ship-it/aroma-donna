@@ -40,7 +40,21 @@ export default function Header() {
 
   return (
     <header className={`header ${scrolled ? 'header--scrolled' : ''}`}>
-      <div className="header__promo">{t('header.promo')}</div>
+      {/* Части сообщения разделены « · » в переводе: на телефоне — по строке на часть, без обрезки */}
+      <div className="header__promo">
+        {t('header.promo')
+          .split(' · ')
+          .map((part, i) => (
+            <span key={part} className="header__promo-part">
+              {i > 0 && (
+                <span className="header__promo-sep" aria-hidden="true">
+                  {' · '}
+                </span>
+              )}
+              {part}
+            </span>
+          ))}
+      </div>
       <div className="container header__inner">
         <button
           type="button"

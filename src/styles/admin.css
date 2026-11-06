@@ -5,7 +5,8 @@
 
 .admin {
   display: grid;
-  grid-template-columns: 248px 1fr;
+  /* minmax(0, …): колонка содержимого не растягивается под самое широкое содержимое */
+  grid-template-columns: 248px minmax(0, 1fr);
   min-height: 100vh;
   background: var(--bg-alt);
 }
@@ -46,7 +47,7 @@
   font-size: 0.7rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-text);
   background: var(--gold-soft);
   border-radius: var(--radius-pill);
 }
@@ -75,7 +76,7 @@
 }
 .admin__link.active {
   background: var(--rose-soft);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ---------- Верхняя панель и содержимое ---------- */
@@ -251,10 +252,13 @@
 
 /* ---------- Планшеты и телефоны: меню становится горизонтальной лентой ---------- */
 @media (max-width: 899px) {
+  /* Одна колонка шириной с экран: без minmax(0, …) колонка росла до полной ширины ленты меню
+     (ссылки не переносятся), и вся страница становилась шире экрана телефона */
   .admin {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .admin__sidebar {
+    min-width: 0;
     position: static;
     height: auto;
     gap: 12px;
@@ -267,10 +271,86 @@
     overflow-x: auto;
     padding-bottom: 4px;
   }
+  /* Подсказка прокрутки ленты: край, за которым есть ещё пункты, плавно затухает (C3.2) */
+  .admin__nav[data-more-right] {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+  }
+  .admin__nav[data-more-left] {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent);
+  }
+  .admin__nav[data-more-left][data-more-right] {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+  }
+  .admin__link {
+    min-height: 44px;
+  }
+  /* Активный пункт ленты заметен и без цвета фона */
+  .admin__link.active {
+    box-shadow: inset 0 -3px 0 var(--primary);
+  }
   .admin__topbar,
   .admin__main {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+/* Телефоны: компактная шапка — логотип и лента меню, ниже одна строка: e-mail и значки действий (C3.2) */
+@media (max-width: 640px) {
+  .admin__sidebar {
+    gap: 6px;
+    padding: 10px 12px 4px;
+  }
+  .admin__brand {
+    font-size: 1.15rem;
+    padding: 0 4px;
+  }
+  .admin__topbar {
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 4px 12px;
+  }
+  .admin__user {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.85rem;
+  }
+  .admin__user-email {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .admin__actions {
+    flex: none;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .admin__actions .icon-btn,
+  .admin__action {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .admin__action {
+    position: relative; /* скрытый текст остаётся внутри кнопки */
+    padding: 0;
+    justify-content: center;
+  }
+  /* Текст кнопок скрыт визуально, но остаётся доступным именем кнопки */
+  .admin__action-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .admin__main {
+    padding-top: 18px;
   }
 }
 
@@ -312,7 +392,7 @@
   border-color: var(--primary);
 }
 .admin-filter.is-active {
-  color: var(--primary);
+  color: var(--primary-text);
   background: var(--rose-soft);
   border-color: var(--primary);
 }
@@ -328,6 +408,9 @@
 
 .admin-table-wrap {
   overflow-x: auto;
+  /* Точка отсчёта для скрытых заголовков столбцов (.visually-hidden — position: absolute): без неё они
+     отсчитывались от body, оставались за пределами прокрутки таблицы и расширяли всю страницу (641–1279px) */
+  position: relative;
 }
 .admin-table {
   width: 100%;
@@ -374,6 +457,15 @@
 }
 .admin-back:hover {
   color: var(--primary);
+}
+/* Телефоны: области нажатия 44px — ссылки в таблицах и «← Все заказы» (C3.2) */
+@media (max-width: 768px) {
+  .admin-back,
+  .admin-table__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
 }
 
 .admin-order {
@@ -491,6 +583,11 @@
   padding-right: 36px;
   color: var(--text);
 }
+@media (max-width: 768px) {
+  .admin-toolbar__sort .field__control {
+    font-size: 1rem; /* ≥ 16px: без увеличения страницы на iPhone (C3.2) */
+  }
+}
 .admin-toolbar__count {
   margin-left: auto;
   font-size: 0.85rem;
@@ -502,6 +599,71 @@
 .admin-muted--inline {
   display: block;
   margin: 2px 0 0;
+}
+
+/* ---------- Заказы: гости и уведомления в Telegram (C3.3, этап 5) ---------- */
+.admin-badge--guest {
+  margin-left: 8px;
+  color: var(--primary-text);
+  background: var(--rose-soft);
+  vertical-align: middle;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+}
+.admin-orders__toolbar input[type='date'].field__control {
+  width: auto;
+  min-width: 0;
+}
+.admin-notify--sent {
+  color: var(--success);
+  background: var(--success-bg);
+}
+.admin-notify--failed {
+  color: var(--error);
+  background: var(--error-bg);
+}
+.admin-notify--pending,
+.admin-notify--sending {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+.admin-order-notify .btn {
+  margin-top: 12px;
+}
+.admin-order-notify__confirm {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.admin-order-notify__confirm p {
+  margin: 0 0 10px;
+}
+.admin-order-notify__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-order-notify__actions .btn {
+  margin-top: 0;
+}
+.admin-order-notify__ok {
+  margin: 10px 0 0;
+  color: var(--success);
+  font-weight: 600;
+}
+.admin-order-notify code {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .admin-orders__toolbar .admin-toolbar__sort {
+    flex: 1 1 140px;
+  }
+  .admin-orders__toolbar input[type='date'].field__control {
+    width: 100%;
+    font-size: 1rem; /* ≥ 16px: без увеличения страницы на iPhone */
+  }
 }
 
 /* ---------- Товары: источник каталога и импорт (этап 5а) ---------- */
@@ -1032,4 +1194,572 @@
     grid-template-columns: 1fr;
     gap: 0;
   }
+}
+
+/* ---------- Отзывы: модерация (этап E) ---------- */
+/* Метки статусов: ожидает — предупреждение, одобрен — успех, отклонён — ошибка */
+.admin-badge--pending {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+.admin-badge--approved {
+  color: var(--success);
+  background: var(--success-bg);
+}
+.admin-badge--rejected {
+  color: var(--error);
+  background: var(--error-bg);
+}
+
+.admin-reviews__note {
+  margin: 0 0 18px;
+  max-width: 75ch;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+/* Сообщение об ошибке действия (одобрение, отклонение, удаление) */
+.admin-reviews__message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 12px 12px 12px 16px;
+  color: var(--error);
+  background: var(--error-bg);
+  border-radius: var(--radius);
+}
+.admin-reviews__message svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.admin-reviews__message p {
+  flex: 1;
+  margin: 0;
+  color: var(--text);
+}
+.admin-reviews__message .icon-btn {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* Повреждённые документы и предупреждение об ограничении списка */
+.admin-reviews__warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 12px 16px;
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-radius: var(--radius);
+}
+.admin-reviews__warning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.admin-reviews__warning p,
+.admin-reviews__warning ul {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+.admin-reviews__warning code {
+  overflow-wrap: anywhere;
+}
+
+/* Список отзывов — карточки: текст длинный, в таблице он читался бы плохо */
+.admin-reviews__list {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-review {
+  display: grid;
+  gap: 10px;
+  padding: clamp(16px, 3vw, 18px) clamp(16px, 4vw, 20px);
+  border-left: 4px solid var(--border-strong);
+}
+.admin-review--pending {
+  border-left-color: var(--warning);
+}
+.admin-review--approved {
+  border-left-color: var(--success);
+}
+.admin-review--rejected {
+  border-left-color: var(--error);
+}
+.admin-review.is-busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+.admin-review__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.admin-review__author {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+.admin-review__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+/* Текст отзыва — обычный текст (не HTML): переносы строк сохраняются, длинные слова переносятся */
+.admin-review__text {
+  margin: 0;
+  max-width: 80ch;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.admin-review__text.is-collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+}
+.admin-review__toggle {
+  justify-self: start;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.admin-review__toggle:hover {
+  color: var(--primary-hover);
+}
+@media (max-width: 768px) {
+  .admin-review__toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px; /* «Показать полностью» (C3.2) */
+  }
+}
+.admin-review__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.admin-review__moderated {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+/* Без отдельного @media: на узком экране кнопки переносятся на новую строку */
+.admin-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.admin-review__delete:not(:disabled) {
+  color: var(--error);
+  border-color: var(--error);
+}
+.admin-review__delete:hover:not(:disabled) {
+  background: var(--error-bg);
+}
+
+/* Окно удаления отзыва — на основе .admin-delete-dialog; здесь только подтверждение флажком */
+.admin-review-delete__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 0 0;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.admin-review-delete__check input {
+  flex-shrink: 0;
+  margin-top: 3px;
+  accent-color: var(--error);
+}
+.admin-review-delete__text {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  max-height: 160px;
+  overflow: auto;
+  color: var(--text);
+  background: var(--bg-alt);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+/* ---------- Отзывы: узкие экраны (телефоны 320–560px и планшеты) ---------- */
+/* Ни один блок раздела не шире колонки: дочерние элементы grid и flex могут сжиматься */
+.admin-reviews {
+  min-width: 0;
+}
+.admin-reviews__list {
+  grid-template-columns: minmax(0, 1fr);
+}
+.admin-review,
+.admin-review > *,
+.admin-review__head > *,
+.admin-reviews__warning > div,
+.admin-reviews__message p {
+  min-width: 0;
+}
+
+/* Окно удаления отзыва: кнопки без переноса в колонки. Общее правило окна удаления (до 640px)
+   ставит column-reverse вместе с flex-wrap и flex: 1 1 100% — в колонке 100% становится высотой,
+   и кнопки вставали высокими «столбиками» рядом друг с другом, а «Удалить навсегда» выходила за край.
+   Здесь — только для окна отзыва; на широком экране вид прежний (кнопки в одну строку справа) */
+.admin-reviews .admin-delete-dialog__actions {
+  flex-wrap: nowrap;
+}
+.admin-reviews .admin-delete-dialog__actions .btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: normal;
+}
+
+/* Телефоны: вкладки — сетка в две колонки, поиск и фильтры — в столбик, кнопки — сеткой на всю ширину.
+   Отдельная граница 560px: планшеты (768px) сохраняют обычный вид в одну строку */
+@media (max-width: 560px) {
+  .admin-reviews .admin-page__head h1 {
+    font-size: 1.7rem;
+  }
+  .admin-reviews .admin-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-reviews .admin-filter {
+    justify-content: space-between;
+    min-width: 0;
+    padding: 8px 12px;
+  }
+  /* Поиск, оценка и сортировка — по одному полю в строке: тексты вариантов не обрезаются */
+  .admin-reviews .admin-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .admin-reviews .admin-toolbar__search {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+  .admin-reviews .admin-toolbar__sort {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 0;
+  }
+  .admin-reviews .admin-toolbar__sort .field__control {
+    width: 100%;
+    min-width: 0;
+  }
+  .admin-reviews .admin-toolbar > .btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .admin-reviews .admin-toolbar__count {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+  .admin-review {
+    padding: 14px 14px 14px 16px;
+  }
+  .admin-review__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-review__actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    margin-left: 0;
+  }
+  .admin-review__actions .btn {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+  /* «Удалить навсегда» — отдельной строкой на всю ширину, подальше от остальных действий */
+  .admin-review__actions .admin-review__delete {
+    grid-column: 1 / -1;
+  }
+  .admin-reviews__warning,
+  .admin-reviews__message {
+    padding: 12px;
+  }
+  .admin-reviews__warning ul {
+    padding-left: 18px;
+  }
+  .admin-review-delete__text {
+    max-height: 120px;
+  }
+}
+
+/* ---------- Администраторы: основа раздела (этап A5) ---------- */
+/* Без @media: на узких экранах (от 320px) элементы переносятся сами, UID и подписи — по символам */
+
+/* Метки ролей */
+.admin-badge--role-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gold-text);
+  background: var(--gold-soft);
+}
+.admin-badge--role-pending {
+  color: var(--info);
+  background: var(--info-bg);
+}
+.admin-badge--role-admin {
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+.admin-badge--self {
+  color: var(--primary-text);
+  background: var(--rose-soft);
+}
+.admin-badge--legacy {
+  color: var(--warning);
+  background: var(--warning-bg);
+}
+
+/* Карточка администратора */
+.admin-member {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: clamp(14px, 3vw, 18px) clamp(14px, 4vw, 20px);
+  border-left: 4px solid var(--border-strong);
+}
+.admin-member--owner {
+  border-left-color: var(--gold);
+}
+.admin-member--pending {
+  border-left-color: var(--info);
+}
+.admin-member > * {
+  min-width: 0;
+}
+.admin-member__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.admin-member__name {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+.admin-member__name.is-empty {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.admin-member__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin-member__facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+/* Подпись и значение в строку; если места мало (телефон), значение переходит под подпись на всю ширину */
+.admin-member__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 12px;
+}
+.admin-member__facts dt {
+  flex: 0 0 8rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.admin-member__facts dd {
+  flex: 1 1 13rem;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+/* UID — моноширинным шрифтом, переносится по символам (до 128 знаков) */
+.admin-member__uid,
+.admin-transfer__uid code {
+  font-size: 0.85rem;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+.admin-member__hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.admin-member__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* Ожидающая передача роли главного администратора */
+.admin-transfer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: 14px clamp(14px, 4vw, 18px);
+  color: var(--info);
+  background: var(--info-bg);
+  border-radius: var(--radius);
+  border-left: 4px solid var(--info);
+}
+.admin-transfer--incoming {
+  color: var(--gold-text);
+  background: var(--gold-soft);
+  border-left-color: var(--gold);
+}
+.admin-transfer > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.admin-transfer__body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text);
+}
+.admin-transfer__title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+.admin-transfer__text,
+.admin-transfer__uid {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.admin-transfer__uid {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.admin-transfer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Окно подтверждения (отзыв доступа, передача и принятие роли) — на основе .admin-delete-dialog */
+/* Длинная подпись или UID в тексте окна переносится, а не выходит за край */
+.admin-confirm-dialog .admin-delete-dialog__text,
+.admin-confirm-dialog .admin-review-delete__check span,
+.admin-confirm-dialog .admin-delete-dialog__error p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-confirm-dialog--offer .admin-confirm-dialog__title,
+.admin-confirm-dialog--accept .admin-confirm-dialog__title {
+  color: var(--heading);
+}
+/* Кнопки без переноса «столбиками»: общее правило окна удаления до 640px ставит column-reverse + wrap */
+.admin-confirm-dialog .admin-delete-dialog__actions {
+  flex-wrap: nowrap;
+}
+.admin-confirm-dialog .admin-delete-dialog__actions .btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: normal;
+}
+
+/* ---------- Администраторы: страница (крупный блок 1) ---------- */
+.admin-admins {
+  min-width: 0;
+}
+.admin-grant {
+  margin: 0 0 22px;
+}
+.admin-grant__text {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+.admin-grant__form {
+  display: grid;
+  gap: 14px;
+  max-width: 560px;
+}
+.admin-grant__form .btn {
+  justify-self: start;
+}
+.admin-admins__list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0 0 4px;
+}
+.admin-admins__list-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.admin-admins__blocked {
+  margin: 0;
+  align-self: center;
+}
+
+/* UID на экране «Нет доступа»: свой UID, выделяется одним нажатием для копирования */
+.admin-gate__uid {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 6px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.admin-gate__uid-label,
+.admin-gate__uid-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.admin-gate__uid-value {
+  font-size: 0.95rem;
+  color: var(--heading);
+  user-select: all;
+  -webkit-user-select: all;
+  cursor: text;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }

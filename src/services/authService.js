@@ -10,6 +10,8 @@
  */
 import { getFirebase, isFirebaseConfigured } from './firebase';
 import { loadFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '../utils/storage';
+import { completeGoogleSignIn, createGoogleProvider } from './googleAuthFlow';
+import { sendPasswordReset } from './passwordReset';
 
   export const AUTH_MODE = isFirebaseConfigured ? 'firebase' : 'demo';
 
@@ -32,6 +34,20 @@ export function toErrorKey(error) {
     'auth/weak-password': 'validation.passwordMin',
     'auth/too-many-requests': 'auth.tooManyRequests',
     'auth/network-request-failed': 'auth.network',
+    // Вход через Google (Блок 2). Отмена — не ошибка: форма её не показывает
+    'auth/popup-closed-by-user': 'auth.google.cancelled',
+    'auth/cancelled-popup-request': 'auth.google.cancelled',
+    'auth/user-cancelled': 'auth.google.cancelled',
+    'auth/popup-blocked': 'auth.google.popupBlocked',
+    'auth/account-exists-with-different-credential': 'auth.google.accountExists',
+    'auth/operation-not-allowed': 'auth.google.notEnabled',
+    'auth/unauthorized-domain': 'auth.google.unauthorizedDomain',
+    'auth/user-disabled': 'auth.google.userDisabled',
+    // Профиль после входа через Google (googleAuthFlow.js)
+    'profile-failed': 'auth.google.profileFailed',
+    'profile-network': 'auth.network',
+    // Восстановление пароля
+    'auth/missing-email': 'validation.required',
   };
   return map[error?.code] || 'auth.unknown';
 }
@@ -95,6 +111,32 @@ export async function login({ email, password }) {
   if (!user) throw new AuthError('auth.demoUserNotFound');
   saveToStorage(STORAGE_KEYS.demoSession, user);
   return user;
+}
+
+// ---------------- Вход через Google (Блок 2) ----------------
+/**
+ * Вход и регистрация через Google: Firebase Authentication, официальный GoogleAuthProvider, всплывающее окно.
+ * Логика после входа (профиль, выход при сбое) — completeGoogleSignIn (googleAuthFlow.js).
+ * Один и тот же аккаунт Google всегда даёт тот же UID — повторный вход не создаёт нового пользователя.
+ * Только с Firebase: в демо-режиме Google недоступен.
+ */
+export async function loginWithGoogle() {
+  if (AUTH_MODE !== 'firebase') throw new AuthError('auth.google.unavailable');
+  const fb = await getFirebase();
+  const { user, profile } = await completeGoogleSignIn(fb, () =>
+    fb.authApi.signInWithPopup(fb.auth, createGoogleProvider(fb.authApi)),
+  );
+  return { ...toUser(user), name: profile.name };
+}
+
+// ---------------- Восстановление пароля (Блок 2) ----------------
+/**
+ * Письмо со ссылкой для смены пароля (sendPasswordResetEmail). Меняется только пароль существующего
+ * аккаунта: UID, профиль и заказы не затрагиваются. Неизвестный e-mail — тот же ответ, что и известный.
+ */
+export async function requestPasswordReset(email) {
+  if (AUTH_MODE !== 'firebase') throw new AuthError('auth.reset.unavailable');
+  return sendPasswordReset(await getFirebase(), email);
 }
 
 // ---------------- Выход ----------------

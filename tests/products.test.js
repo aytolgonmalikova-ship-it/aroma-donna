@@ -182,8 +182,15 @@ test('прежние правила users, orders, reviews, admins и запре
   [
     'allow read: if isOwner(userId) || isAdmin();',
     'allow update: if isAdmin() && isValidOrderStatusChange();',
-    'allow get: if isOwner(adminId);',
-    'allow list, create, update, delete: if false;',
+    // admins — роли owner и admin (этап A3), подробно в tests-emulator/firestore.rules.emulator.js:
+    // свой документ читает каждый, остальное — только главный администратор; изменять нельзя никому
+    'allow get: if isOwner(adminId) || isPrimaryOwner();',
+    'allow list: if isPrimaryOwner();',
+    'allow create: if isPrimaryOwner()',
+    'allow update: if false;',
+    'allow delete: if isPrimaryOwner()',
+    // isAdmin() по-прежнему — только наличие admins/{uid}: права в разделах не изменились
+    'return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));',
     // reviews — строгие правила модерации (этап D), подробно в tests/reviews.test.js
     'allow create: if isValidReview(request.resource.data);',
     'allow update: if isAdmin() && isValidReviewModeration();',

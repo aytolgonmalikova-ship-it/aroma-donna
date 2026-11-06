@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E2E: стенд админ-панели и сайта</title>
+    <script>
+      // Тестовый стенд для tests-e2e/admins.e2e.mjs (только сервер разработки в тестовом режиме, не входит в сборку).
+      // Тема — до загрузки React, как в index.html
+      var q = new URLSearchParams(location.search);
+      var theme = q.get('theme') === 'dark' ? 'dark' : 'light';
+      localStorage.setItem('aroma_theme', JSON.stringify(theme));
+      document.documentElement.setAttribute('data-theme', theme);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      // Настоящие AdminRoute и AdminAdminsPage с Redux, темой и переводами. Раздел ещё не подключён
+      // к маршрутам приложения, поэтому страница открывается здесь. Вход — тестовым пользователем эмулятора.
+      import { createElement as h } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { Provider } from 'react-redux';
+      import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+      import { isEmulatorMode, getFirebase } from '/src/services/firebase.js';
+      import { store } from '/src/store/store.js';
+      import { ThemeProvider } from '/src/hooks/useTheme.jsx';
+      import i18n from '/src/i18n.js';
+      import { subscribeToAuth } from '/src/services/authService.js';
+      import { setUser } from '/src/features/user/userSlice.js';
+      import AdminRoute from '/src/components/admin/AdminRoute.jsx';
+      import AdminAdminsPage from '/src/pages/admin/AdminAdminsPage.jsx';
+      import AdminApp from '/src/pages/admin/AdminApp.jsx';
+      import App from '/src/App.jsx';
+      import CheckoutForm from '/src/components/forms/CheckoutForm.jsx';
+      import { buildOrderRequest } from '/src/utils/orderRequest.js';
+      import { submitOrder } from '/src/services/orderService.js';
+      import { products } from '/src/data/products.js';
+      import { calcDelivery } from '/src/utils/promo.js';
+      import Notification from '/src/components/common/Notification.jsx';
+      import '/src/styles/variables.css';
+      import '/src/styles/base.css';
+      import '/src/styles/layout.css';
+      import '/src/styles/components.css';
+      import '/src/styles/pages.css';
+      import '/src/styles/admin.css';
+
+      if (!isEmulatorMode) {
+        document.body.textContent = 'СТОП: стенд работает только в тестовом режиме с эмуляторами';
+        throw new Error('not emulator mode');
+      }
+      const q = new URLSearchParams(location.search);
+      await i18n.changeLanguage(q.get('lang') || 'ru');
+      // mode=site — весь сайт (App) без автоматического входа: App сам подписывается на пользователя
+      const siteMode = q.get('mode') === 'site';
+      if (!siteMode) {
+        const { auth, authApi } = await getFirebase();
+        await authApi.signInWithEmailAndPassword(auth, q.get('email'), q.get('password'));
+        subscribeToAuth((user) => store.dispatch(setUser(user)));
+      }
+      // mode=app — вся админ-панель (AdminApp: меню, маршруты, защита) по адресу path, как в App.jsx;
+      // иначе — только страница «Администраторы» внутри AdminRoute
+      function TrackPath() {
+        window.__e2ePath = useLocation().pathname; // текущий адрес — для проверки переходов
+        window.__e2eNavigate = useNavigate(); // переход внутри приложения (как по ссылке)
+        return null;
+      }
+      // mode=checkout — настоящая форма оформления; отправка — на сервер /api/order, как на CheckoutPage
+      // (C3.3: заказ создаёт только сервер). Одна позиция каталога эмулятора. Номер заказа — в window.__e2eOrderId
+      async function submitCheckout(values) {
+        const product = products.find((p) => p.availability === 'inStock');
+        const volume = [...product.volumes].sort((x, y) => x.price - y.price)[0];
+        const request = buildOrderRequest({
+          lines: [{ id: product.id, volume: volume.ml, quantity: 1 }],
+          promoCode: null,
+          deliveryMethod: 'pickup',
+          values,
+          expectedTotal: volume.price + calcDelivery('pickup', volume.price),
+        });
+        const { order } = await submitOrder(request, { requestId: crypto.randomUUID(), signedIn: true });
+        window.__e2eOrderId = order.orderId;
+      }
+      const checkoutContent = () =>
+        h(MemoryRouter, null,
+          h('main', { className: 'container', style: { padding: '16px 0' } },
+            h(CheckoutForm, {
+              initialValues: {},
+              deliveryMethod: 'pickup',
+              onDeliveryChange: () => {},
+              onSubmit: (values) => submitCheckout(values).catch((err) => (window.__e2eOrderError = String(err?.code || err))),
+              onCancel: () => {},
+              submitting: false,
+              totalLabel: '1 000',
+            })));
+      const content = siteMode
+        ? h(MemoryRouter, { initialEntries: [q.get('path') || '/'] }, h(TrackPath), h(App))
+        : q.get('mode') === 'checkout'
+          ? checkoutContent()
+          : q.get('mode') === 'app'
+          ? h(MemoryRouter, { initialEntries: [q.get('path') || '/admin'] },
+              h(TrackPath),
+              h(Routes, null, h(Route, { path: '/admin/*', element: h(AdminApp) })))
+          : h(MemoryRouter, null,
+              h('div', { className: 'admin' },
+                h('div', { className: 'admin__body' },
+                  h('main', { id: 'admin-main', className: 'admin__main' }, h(AdminRoute, null, h(AdminAdminsPage)))),
+                h(Notification)));
+      createRoot(document.getElementById('root')).render(h(Provider, { store }, h(ThemeProvider, null, content)));
+      window.__e2eReady = true;
+    </script>
+  </body>
+</html>

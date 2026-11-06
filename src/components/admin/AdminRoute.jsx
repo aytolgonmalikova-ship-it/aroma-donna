@@ -57,9 +57,22 @@ export default function AdminRoute({ children }) {
     );
   }
   if (status !== 'admin') {
+    // UID вошедшего пользователя (из Firebase Auth) — его отправляют главному администратору,
+    // чтобы получить доступ. Показывается только свой UID; выделяется одним нажатием для копирования.
     return (
       <AdminGate icon="shield" title={t('admin.deniedTitle')}>
         <p>{t('admin.deniedText', { email: current.email })}</p>
+        {current.uid && (
+          <div className="admin-gate__uid">
+            <p className="admin-gate__uid-label" id="admin-gate-uid-label">
+              {t('admin.deniedUidLabel')}
+            </p>
+            <code className="admin-gate__uid-value" aria-labelledby="admin-gate-uid-label">
+              {current.uid}
+            </code>
+            <p className="admin-gate__uid-hint">{t('admin.deniedUidHint')}</p>
+          </div>
+        )}
       </AdminGate>
     );
   }

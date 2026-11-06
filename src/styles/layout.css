@@ -279,6 +279,21 @@
     font-size: 0.75rem;
   }
 }
+/* Телефоны: каждая часть сообщения — своей строкой, ничего не обрезается (C3.2) */
+@media (max-width: 640px) {
+  .header__promo {
+    white-space: normal;
+    padding: 4px 12px;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+  }
+  .header__promo-part {
+    display: block;
+  }
+  .header__promo-sep {
+    display: none;
+  }
+}
 @media (max-width: 480px) {
   .header__inner {
     gap: 4px;
@@ -350,6 +365,16 @@
   margin-top: 3px;
   color: var(--primary);
 }
+/* Телефоны: WhatsApp и Instagram в подвале — область нажатия 44px (C3.2) */
+@media (max-width: 768px) {
+  .footer .whatsapp-link,
+  .footer .instagram-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+  }
+}
 .footer__bottom {
   margin-top: 36px;
   padding-top: 20px;
@@ -413,7 +438,7 @@
   letter-spacing: 0.18em;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 8px;
 }
 

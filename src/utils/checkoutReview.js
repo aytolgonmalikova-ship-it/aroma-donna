@@ -3,6 +3,7 @@
 // убрали объём, изменили цену или наличие. Заказ собирается только из данных,
 // прочитанных из Firestore прямо перед сохранением. Чистые функции — проверяются тестами.
 import { calcDelivery, calcDiscount } from './promo.js';
+import { toStoredPhone } from './phone.js';
 
 /** Причины, по которым позицию нельзя оформить */
 export const CHECKOUT_PROBLEMS = ['missing', 'outOfStock', 'volumeUnavailable'];
@@ -106,7 +107,7 @@ export function buildOrder({ id, createdAt, user, lines, totals, promoCode, valu
     customer: {
       name: values.name.trim(),
       lastName: values.lastName.trim(),
-      phone: values.phone.trim(),
+      phone: toStoredPhone(values.phone), // новый номер — E.164: +996700123456
       email: values.email.trim(),
     },
     shipping: {

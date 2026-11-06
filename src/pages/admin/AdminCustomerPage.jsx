@@ -8,6 +8,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { fetchCustomer } from '../../services/adminService';
 import { shortUid } from '../../utils/customers';
 import { formatDate, formatPrice } from '../../utils/format';
+import { displayPhone } from '../../utils/phone';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 /** Карточка покупателя: профиль users/{uid}, статистика и список его заказов (только просмотр) */
@@ -57,6 +58,8 @@ export default function AdminCustomerPage() {
   }
 
   const lang = i18n.resolvedLanguage;
+  // Номер из последнего заказа не меняется — только вид на экране
+  const phone = displayPhone(customer.phone);
 
   return (
     <>
@@ -86,9 +89,9 @@ export default function AdminCustomerPage() {
             <div>
               <dt>{t('admin.customers.phone')}</dt>
               <dd>
-                {customer.phone ? (
+                {phone.text ? (
                   <>
-                    <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`}>{customer.phone}</a>
+                    {phone.href ? <a href={phone.href}>{phone.text}</a> : phone.text}
                     <small className="admin-muted admin-muted--inline">{t('admin.customers.phoneHint')}</small>
                   </>
                 ) : (

@@ -436,7 +436,7 @@
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-size: 0.8rem;
-  color: var(--gold);
+  color: var(--gold-text);
   font-weight: 700;
   margin: 0;
 }
@@ -626,7 +626,7 @@
   border-radius: var(--radius-sm);
 }
 .cart-item__brand {
-  font-size: 0.72rem;
+  font-size: 0.75rem; /* 12px — как бренд в карточке (C3.2) */
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -1308,6 +1308,13 @@
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+.success__note {
+  /* Пояснение к DEMO-оплате (C3.3): деньги не списаны, оплата при получении */
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
 .success__details {
   display: grid;
   gap: 8px;
@@ -1524,7 +1531,7 @@
   color: #23161a;
 }
 .match-badge--sm {
-  font-size: 0.72rem;
+  font-size: 0.75rem; /* 12px (C3.2) */
   margin: 8px 0 0;
   justify-self: start;
 }
@@ -1977,4 +1984,66 @@
     animation: none;
     transform: none;
   }
+}
+
+/* ---------- Вход через Google (Блок 2) ---------- */
+.google-signin {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 4px;
+}
+.google-btn {
+  gap: 10px;
+  min-width: 0;
+  white-space: normal;
+}
+.google-btn__logo {
+  flex-shrink: 0;
+}
+.google-signin__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+/* «или» между кнопкой Google и формой */
+.google-signin__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.google-signin__divider::before,
+.google-signin__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---------- Восстановление пароля (Блок 2) ---------- */
+.form__forgot {
+  margin: -6px 0 0;
+  text-align: right;
+  font-size: 0.88rem;
+}
+.reset-sent {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  overflow-wrap: anywhere; /* длинный e-mail переносится на узком экране */
+}
+.reset-sent p {
+  margin: 0;
+}
+.reset-sent__title {
+  font-weight: 700;
+  color: var(--success);
+}
+.reset-sent__actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
 }

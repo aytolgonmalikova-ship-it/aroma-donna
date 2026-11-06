@@ -80,6 +80,12 @@ export default function LoginForm() {
           </button>
         </div>
       </FormField>
+      {/* Восстановление пароля (Блок 2): введённый e-mail переносится в форму */}
+      <p className="form__forgot">
+        <Link to="/forgot-password" state={{ email: values.email }}>
+          {t('auth.reset.link')}
+        </Link>
+      </p>
       <button type="submit" className="btn btn--primary btn--lg btn--block" disabled={loading}>
         {loading ? <LoadingSpinner size="sm" /> : null}
         {t('auth.loginButton')}

@@ -45,12 +45,20 @@ export default function CatalogPage() {
           onReset={resetFilters}
           open={filtersOpen}
           onClose={() => setFiltersOpen(false)}
+          id="catalog-filters"
         />
         {filtersOpen && <div className="filters__backdrop" onClick={() => setFiltersOpen(false)} aria-hidden="true" />}
 
         <section className="catalog__main" aria-label={t('catalog.results')}>
           <div className="catalog__toolbar">
-            <button type="button" className="btn btn--outline catalog__filters-btn" onClick={() => setFiltersOpen(true)}>
+            <button
+              type="button"
+              className="btn btn--outline catalog__filters-btn"
+              onClick={() => setFiltersOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={filtersOpen}
+              aria-controls="catalog-filters"
+            >
               <Icon name="filter" size={18} /> {t('filters.title')}
               {activeCount > 0 && <span className="filter-group__count">{activeCount}</span>}
             </button>

@@ -13,9 +13,12 @@
 import { getFirebase, isFirebaseConfigured } from './firebase';
 import { isOrderStatus } from '../utils/orderStatus';
 import { buildCustomers } from '../utils/customers';
+import { orderDocPath, orderOwnerFromPath } from '../utils/adminOrders';
 import { prepareCatalogImport } from '../utils/products';
 import { AdminError, toAdminError } from './adminErrors';
 import * as productsStore from './adminProductsStore';
+import * as adminReviewsStore from './adminReviewsStore';
+import * as adminsStore from './adminAdminsStore';
 
 // Ошибка с кодом для интерфейса (коды — в adminErrors.js)
 export { AdminError };
@@ -40,20 +43,28 @@ export async function checkIsAdmin(uid) {
   }
 }
 
-// ---------- Заказы (этап 3) ----------
-// Заказы покупателей лежат в users/{uid}/orders/{orderId}. Админ читает их все одним
-// запросом collectionGroup('orders') — правило `match /{path=**}/orders/{orderId}`
-// разрешает это только при isAdmin(). Обычному пользователю такой запрос вернёт permission-denied.
+// ---------- Заказы (этап 3; гостевые — C3.3, этап 5) ----------
+// Заказы покупателей лежат в users/{uid}/orders/{orderId}, гостевые — в guests/{guestKey}/orders/{orderId}
+// (guestKey — HMAC гостевой сессии, а не UID). Админ читает их все одним запросом collectionGroup('orders')
+// с сортировкой и лимитом — правило `match /{path=**}/orders/{orderId}` разрешает это только при isAdmin().
+// Обычному пользователю и гостю такой запрос вернёт permission-denied.
 
 const ORDERS_LIMIT = 500;
 
-/** Документ Firestore → объект заказа для админки (uid владельца берём из пути документа) */
-function toAdminOrder(snap) {
+/**
+ * Документ Firestore → объект заказа для админки. Тип и владелец — только из пути документа:
+ * users/{uid} — покупатель (userId), guests/{guestKey} — гость (isGuest, guestKey; userId: null).
+ */
+export function toAdminOrder(snap) {
   const data = snap.data();
+  const owner = orderOwnerFromPath(snap.ref.path);
+  const isGuest = owner?.kind === 'guest';
   return {
     ...data,
     id: snap.id,
-    userId: snap.ref.parent.parent?.id || data.userId || null,
+    isGuest,
+    guestKey: isGuest ? owner.ownerId : null,
+    userId: isGuest ? null : owner?.ownerId || data.userId || null,
     statusUpdatedAt: data.statusUpdatedAt?.toDate ? data.statusUpdatedAt.toDate().toISOString() : null,
   };
 }
@@ -81,11 +92,11 @@ export async function fetchAllOrders() {
   }
 }
 
-/** Один заказ по пути users/{userId}/orders/{orderId}; null — не найден */
-export async function fetchOrder(userId, orderId) {
+/** Один заказ: { kind: 'user' | 'guest', ownerId, orderId }; null — не найден */
+export async function fetchOrder({ kind, ownerId, orderId }) {
   try {
     const { db, dbApi } = await getFirebase();
-    const snap = await dbApi.getDoc(dbApi.doc(db, 'users', userId, 'orders', orderId));
+    const snap = await dbApi.getDoc(dbApi.doc(db, ...orderDocPath({ kind, ownerId, orderId })));
     return snap.exists() ? toAdminOrder(snap) : null;
   } catch (err) {
     throw toAdminError(err);
@@ -104,20 +115,49 @@ export async function fetchOrdersCount() {
 }
 
 /**
- * Изменение статуса заказа. Записываются только status и statusUpdatedAt —
+ * Изменение статуса заказа { kind, ownerId, orderId }. Записываются только status и statusUpdatedAt —
  * правила firestore.rules отклонят любое другое поле, неизвестный статус и запрос не от админа.
+ * Гостевые заказы — то же правило (match /guests/{guestKey}/orders, этап 6 плана C3.3). Если в Firebase
+ * опубликованы старые правила без него — ошибка guest-status-rules, документ не меняется.
  */
-export async function updateOrderStatus(userId, orderId, status) {
+export async function updateOrderStatus({ kind, ownerId, orderId }, status) {
   if (!isOrderStatus(status)) throw new AdminError('failed');
   try {
     const { db, dbApi } = await getFirebase();
-    await dbApi.updateDoc(dbApi.doc(db, 'users', userId, 'orders', orderId), {
+    await dbApi.updateDoc(dbApi.doc(db, ...orderDocPath({ kind, ownerId, orderId })), {
       status,
       statusUpdatedAt: dbApi.serverTimestamp(),
     });
   } catch (err) {
+    if (kind === 'guest' && err?.code === 'permission-denied') throw new AdminError('guest-status-rules');
     throw toAdminError(err);
   }
+}
+
+/**
+ * Повторная отправка уведомления о заказе в Telegram — только по явному действию администратора.
+ * Сервер (api/order-notify.js) проверяет ID-токен и роль (admins/{uid}), что заказ есть и уведомление
+ * действительно не отправлено, и отправляет с «арендой» (два администратора не отправят одновременно).
+ * Возвращает новый статус: 'sent' | 'failed' | 'in_progress'.
+ */
+export async function resendOrderNotification({ kind, ownerId, orderId }) {
+  const { auth } = await getFirebase();
+  const current = auth.currentUser;
+  if (!current) throw new AdminError('not-signed-in');
+  let res;
+  try {
+    res = await fetch('/api/order-notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await current.getIdToken()}` },
+      body: JSON.stringify({ kind, ownerId, orderId }),
+    });
+  } catch {
+    throw new AdminError('network');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (res.ok && data.ok) return data.notification;
+  const known = ['already_sent', 'in_progress', 'not_needed', 'not_found', 'not_admin', 'auth_invalid', 'not_configured'];
+  throw new AdminError(known.includes(data.error) ? `notify-${data.error}` : 'failed');
 }
 
 // ---------- Покупатели (этап 4) ----------
@@ -267,3 +307,63 @@ export const setProductHidden = (id, hidden, loadedUpdatedAt) =>
 
 /** Окончательное удаление только скрытого товара. Ошибки: not-found, conflict, not-hidden, last-visible */
 export const deleteProduct = (id, loadedUpdatedAt) => withFirebase(productsStore.deleteProduct, id, loadedUpdatedAt);
+
+// ---------- Модерация отзывов (этап E) ----------
+// Логика и транзакции — в adminReviewsStore.js (проверяется тестами на модели Firestore).
+// Правила firestore.rules (этап D): администратор читает отзывы всех статусов, меняет только
+// status и moderatedAt и навсегда удаляет только отклонённые. Публичные запросы — в reviewsService.js.
+
+/** Все отзывы любого статуса, новые сверху: { reviews, invalidIds, limited } */
+export const fetchAllReviews = (options) => withFirebase(adminReviewsStore.fetchAllReviews, options);
+
+/**
+ * Новый статус отзыва (pending, approved, rejected): записываются только status и moderatedAt.
+ * loadedStatus — статус при загрузке списка. Ошибки: not-found, conflict (статус изменили в другом окне), invalid.
+ * Статус уже такой — ничего не записывается: { changed: false }.
+ */
+export const setReviewStatus = (id, status, loadedStatus) =>
+  withFirebase(adminReviewsStore.setReviewStatus, id, status, loadedStatus);
+
+/** Окончательное удаление только отклонённого отзыва. Ошибки: not-found, not-rejected */
+export const deleteReview = (id) => withFirebase(adminReviewsStore.deleteReview, id);
+
+// ---------- Администраторы и передача роли владельца (этап A4) ----------
+// Логика и транзакции — в adminAdminsStore.js (проверяется на Firebase Emulator с настоящими правилами).
+// UID вошедшего пользователя берётся только из Firebase Auth: интерфейс не может действовать
+// от имени другого пользователя. Окончательное решение — правила firestore.rules (этапы A3, A3.1).
+
+/** Вызвать функцию adminAdminsStore от имени вошедшего пользователя */
+async function withActor(fn, ...args) {
+  try {
+    const fb = await getFirebase();
+    const actorUid = fb.auth.currentUser?.uid;
+    if (!actorUid) throw new AdminError('not-signed-in');
+    return await fn(fb, actorUid, ...args);
+  } catch (err) {
+    throw toAdminError(err);
+  }
+}
+
+/** Моя роль в управлении: { access: 'owner' | 'pending' | 'none', config } (none — не ошибка) */
+export const fetchOwnerStatus = () => withActor(adminsStore.fetchOwnerStatus);
+
+/** Все администраторы — только владельцу: { admins, config }; остальным — 'not-owner' */
+export const fetchAdmins = () => withActor(adminsStore.fetchAdmins);
+
+/** Назначить администратором зарегистрированного пользователя по UID. Ошибки: user-not-found, already-admin, self… */
+export const grantAdmin = (uid, options) => withActor(adminsStore.grantAdmin, uid, options);
+
+/** Отозвать доступ одного администратора. Ошибки: self, owner-protected, pending-owner, not-admin, not-owner */
+export const revokeAdmin = (uid) => withActor(adminsStore.revokeAdmin, uid);
+
+/** Предложить роль владельца администратору. Ошибки: offer-exists, candidate-not-admin, self, not-owner */
+export const offerOwnerTransfer = (uid) => withActor(adminsStore.offerOwnerTransfer, uid);
+
+/** Отменить предложение (владелец). expectedPendingUid — кандидат на экране; изменился — 'offer-stale' */
+export const cancelOwnerTransfer = (expectedPendingUid) => withActor(adminsStore.cancelOwnerTransfer, expectedPendingUid);
+
+/** Отклонить предложение (кандидат, своим входом). Предложения нет — 'no-offer' */
+export const declineOwnerTransfer = () => withActor(adminsStore.declineOwnerTransfer);
+
+/** Принять роль владельца (кандидат, своим входом). expectedOwnerUid — владелец на экране; изменился — 'offer-stale' */
+export const acceptOwnerTransfer = (expectedOwnerUid) => withActor(adminsStore.acceptOwnerTransfer, expectedOwnerUid);
