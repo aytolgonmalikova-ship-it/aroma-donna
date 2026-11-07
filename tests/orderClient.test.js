@@ -332,3 +332,15 @@ test('endpoint повторной отправки: только POST, ID-ток
   assert.doesNotMatch(src, /TELEGRAM_BOT_TOKEN|setInterval|setTimeout/);
   assert.match(read('api/order-notify.js'), /handleNotify\(/);
 });
+
+test('диагностика App Check в браузере: только код и HTTP-статус, без токенов и произвольного текста', async () => {
+  const { appCheckFailureInfo } = await import('../src/utils/orderRequest.js');
+  assert.deepEqual(appCheckFailureInfo({ reason: 'appCheck/initial-throttle', httpStatus: 403 }), { reason: 'appCheck/initial-throttle', httpStatus: 403 });
+  assert.deepEqual(appCheckFailureInfo({ reason: 'no-site-key', httpStatus: null }), { reason: 'no-site-key', httpStatus: null });
+  assert.deepEqual(appCheckFailureInfo({ reason: 'eyJ token with spaces', httpStatus: 'x' }), { reason: 'unknown', httpStatus: null });
+  assert.deepEqual(appCheckFailureInfo({ reason: 'x'.repeat(65), httpStatus: 9999 }), { reason: 'unknown', httpStatus: null });
+  assert.deepEqual(appCheckFailureInfo(null), { reason: 'unknown', httpStatus: null });
+  const src = readFileSync(join(ROOT, 'src/services/orderService.js'), 'utf8');
+  assert.match(src, /console\.warn\('\[order\] App Check: токен не получен', appCheckFailureInfo\(err\)\)/);
+  assert.doesNotMatch(src, /console\.\w+\([^)]*(appCheckToken|getIdToken|request\b)/);
+});

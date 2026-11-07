@@ -14,7 +14,7 @@ import { getFirebase } from './firebase';
 import { AUTH_MODE } from './authService';
 import { getGuestAppCheckToken } from './appCheck';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
-import { toRecentOrder } from '../utils/orderRequest';
+import { appCheckFailureInfo, toRecentOrder } from '../utils/orderRequest';
 
 /** Ошибка оформления: code — код ответа сервера (или network), без внутренних подробностей */
 export class OrderSubmitError extends Error {
@@ -58,6 +58,8 @@ async function postOrder(body, headers) {
   const data = await res.json().catch(() => null);
   if (res.ok && data?.ok && data.order) return data;
   const { ok: _ok, error, ...details } = data || {};
+  // Диагностика: статус и код ответа сервера (без тела запроса и токенов)
+  console.warn('[order] /api/order:', res.status, typeof error === 'string' ? error : 'no-code');
   throw new OrderSubmitError(typeof error === 'string' ? error : res.status >= 500 ? 'network' : 'invalid_request', {
     status: res.status,
     details,
@@ -88,7 +90,9 @@ export async function submitOrder(request, { requestId, signedIn }) {
   let appCheckToken;
   try {
     appCheckToken = await getGuestAppCheckToken();
-  } catch {
+  } catch (err) {
+    // Диагностика: код ошибки App Check и HTTP-статус обмена, без токенов
+    console.warn('[order] App Check: токен не получен', appCheckFailureInfo(err));
     throw new OrderSubmitError('app_check_unavailable');
   }
   return postOrder({ ...request, requestId, guestSessionId: getGuestSessionId() }, { 'X-Firebase-AppCheck': appCheckToken });

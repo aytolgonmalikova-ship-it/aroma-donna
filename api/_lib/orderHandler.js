@@ -63,10 +63,16 @@ async function verifyCustomer(admin, headers) {
 /** Гость: обязательный токен App Check; без него или при ошибке — 403, обхода нет */
 async function verifyGuest(admin, headers) {
   const token = headers['x-firebase-appcheck'];
-  if (typeof token !== 'string' || token.length < 10 || token.length > 4096) throw new OrderError(403, 'app_check_required');
+  if (typeof token !== 'string' || token.length < 10 || token.length > 4096) {
+    console.warn('[order] App Check: нет заголовка X-Firebase-AppCheck');
+    throw new OrderError(403, 'app_check_required');
+  }
   try {
     await admin.verifyAppCheck(token);
-  } catch {
+  } catch (err) {
+    // Только код ошибки Admin SDK (например app-check/invalid-argument) — без токена и текста ошибки
+    const code = err?.code || err?.errorInfo?.code || err?.name;
+    console.warn('[order] App Check отклонён:', typeof code === 'string' && /^[\w/.-]{1,64}$/.test(code) ? code : 'unknown');
     throw new OrderError(403, 'app_check_failed');
   }
 }

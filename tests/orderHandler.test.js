@@ -169,3 +169,28 @@ test('серверные секреты не попадают в клиентс�
     }
   }
 });
+
+test('диагностика App Check: в лог — только код ошибки, без токена и текста ошибки', async () => {
+  const token = `tok.${'s'.repeat(60)}`;
+  const logs = [];
+  const original = console.warn;
+  console.warn = (...args) => logs.push(args.join(' '));
+  try {
+    const run = async (verifyAppCheck, headers) => {
+      const { admin } = fakeAdmin({ verifyAppCheck });
+      return call({ headers, body: body({ guestSessionId: GSID }), deps: { admin } });
+    };
+    const missing = await run(undefined, {});
+    const rejected = await run(async () => { throw Object.assign(new Error(`Decoding failed: ${token}`), { code: 'app-check/invalid-argument' }); }, { 'X-Firebase-AppCheck': token });
+    const weird = await run(async () => { throw Object.assign(new Error(token), { code: `bad code ${token}` }); }, { 'X-Firebase-AppCheck': token });
+    assert.deepEqual([missing.status, rejected.status, weird.status], [403, 403, 403]);
+  } finally {
+    console.warn = original;
+  }
+  assert.deepEqual(logs, [
+    '[order] App Check: нет заголовка X-Firebase-AppCheck',
+    '[order] App Check отклонён: app-check/invalid-argument',
+    '[order] App Check отклонён: unknown',
+  ]);
+  assert.ok(logs.every((l) => !l.includes(token) && !l.includes('Decoding')));
+});

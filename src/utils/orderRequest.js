@@ -109,6 +109,16 @@ export function checkoutErrorMessage(error) {
   }
 }
 
+/**
+ * Для диагностики в консоли браузера: почему не получен токен App Check — только код ошибки
+ * (например appCheck/initial-throttle, no-site-key) и HTTP-статус обмена, без токенов и текста ошибок.
+ */
+export function appCheckFailureInfo(error) {
+  const reason = typeof error?.reason === 'string' && /^[\w/.-]{1,64}$/.test(error.reason) ? error.reason : 'unknown';
+  const status = Number(error?.httpStatus);
+  return { reason, httpStatus: Number.isInteger(status) && status >= 100 && status <= 599 ? status : null };
+}
+
 /** Безопасная сводка заказа для страницы результата: только ответ сервера (без телефона, e-mail, адреса) */
 export const RECENT_ORDER_FIELDS = ['orderId', 'createdAt', 'customerType', 'items', 'subtotal', 'discount', 'promoCode', 'delivery', 'total', 'deliveryMethod', 'paymentMethod', 'paymentStatus'];
 export function toRecentOrder(result) {

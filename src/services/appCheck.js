@@ -18,9 +18,11 @@ import { getFirebase, isEmulatorMode } from './firebase';
 const env = import.meta.env ?? {};
 
 export class AppCheckUnavailableError extends Error {
-  constructor(reason) {
+  constructor(reason, httpStatus = null) {
     super(reason);
     this.code = 'app_check_unavailable';
+    this.reason = reason;
+    this.httpStatus = httpStatus;
   }
 }
 
@@ -56,6 +58,7 @@ export async function getGuestAppCheckToken() {
     return token;
   } catch (err) {
     if (err instanceof AppCheckUnavailableError) throw err;
-    throw new AppCheckUnavailableError(err?.code || err?.message || 'failed');
+    // httpStatus — ответ обмена токена reCAPTCHA в Firebase App Check (exchangeRecaptchaEnterpriseToken)
+    throw new AppCheckUnavailableError(err?.code || err?.message || 'failed', err?.customData?.httpStatus ?? null);
   }
 }
