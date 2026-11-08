@@ -10,7 +10,14 @@ export function formatPrice(value) {
   return `${grouped}\u00a0KGS`;
 }
 
-/** ISO-дата → «28.10.2026, 15:40» в формате выбранного языка */
+/** Дата Firestore (Timestamp или его JSON { seconds, nanoseconds }), Date, ISO-строка или число → Date */
+function toDateValue(value) {
+  if (typeof value?.toDate === 'function') return value.toDate();
+  if (value && typeof value === 'object' && Number.isFinite(value.seconds)) return new Date(value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6));
+  return new Date(value);
+}
+
+/** ISO-дата → «28.10.2026, 15:40» в формате выбранного языка. Всегда строка: непонятная дата → «—» */
 export function formatDate(iso, lang = 'ru') {
   try {
     return new Intl.DateTimeFormat(LOCALES[lang] || 'ru-RU', {
@@ -19,9 +26,9 @@ export function formatDate(iso, lang = 'ru') {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(iso));
+    }).format(toDateValue(iso));
   } catch {
-    return iso;
+    return typeof iso === 'string' ? iso : '—';
   }
 }
 
