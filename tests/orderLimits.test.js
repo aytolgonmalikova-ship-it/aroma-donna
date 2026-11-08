@@ -102,10 +102,13 @@ test('форма показывает те же регионы и города �
   const html = app.form({ region: 'issykkul', city: 'karakol' });
   assert.deepEqual(options(html, 'co-region'), Object.keys(BEFORE));
   assert.deepEqual(options(html, 'co-city'), ['karakol', 'cholponata']);
-  // Курьер по Бишкеку: регион и город заблокированы, как раньше
+  // Курьер по Бишкеку: регион и город доступны (другой регион переключает доставку на «по регионам»)
   const courier = app.form({}, 'courier');
-  assert.match(courier.match(/<select id="co-region"[^>]*>/)[0], /disabled=""/);
+  for (const id of ['co-region', 'co-city']) assert.doesNotMatch(courier.match(new RegExp(`<select id="${id}"[^>]*>`))[0], /disabled/, id);
   assert.deepEqual(options(courier, 'co-city'), ['bishkek']);
+  const form = readFileSync(join(ROOT, 'src/components/forms/CheckoutForm.jsx'), 'utf8');
+  assert.match(form, /name === 'region' && values\.delivery === 'courier' && value !== 'bishkek'/);
+  assert.match(form, /if \(leavesCourier\) onDeliveryChange\('regions'\)/);
 });
 
 test('ограничения заказа: 20 позиций, 10 штук (та же константа, что в корзине), длины полей', () => {

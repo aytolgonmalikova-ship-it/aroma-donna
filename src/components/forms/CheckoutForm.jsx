@@ -38,12 +38,16 @@ export default function CheckoutForm({ initialValues, deliveryMethod, onDelivery
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // Курьер — только по Бишкеку: другой регион переключает доставку на «по регионам»
+    const leavesCourier = name === 'region' && values.delivery === 'courier' && value !== 'bishkek';
     setValues((v) => {
       const next = { ...v, [name]: type === 'checkbox' ? checked : value };
       // При смене региона подставляем первый город этого региона
       if (name === 'region') next.city = REGIONS[value]?.[0] || '';
+      if (leavesCourier) next.delivery = 'regions';
       return next;
     });
+    if (leavesCourier) onDeliveryChange('regions');
     if (errors[name]) setErrors((er) => ({ ...er, [name]: undefined }));
   };
 
@@ -69,7 +73,6 @@ export default function CheckoutForm({ initialValues, deliveryMethod, onDelivery
   };
 
   const needsAddress = values.delivery !== 'pickup';
-  const isCourier = values.delivery === 'courier';
   const isCard = values.payment === 'cardDemo';
 
   return (
@@ -132,7 +135,6 @@ export default function CheckoutForm({ initialValues, deliveryMethod, onDelivery
                   className="field__control"
                   value={values.region}
                   onChange={handleChange}
-                  disabled={isCourier}
                 >
                   {Object.keys(REGIONS).map((region) => (
                     <option key={region} value={region}>
@@ -148,7 +150,6 @@ export default function CheckoutForm({ initialValues, deliveryMethod, onDelivery
                   className="field__control"
                   value={values.city}
                   onChange={handleChange}
-                  disabled={isCourier}
                 >
                   {(REGIONS[values.region] || []).map((city) => (
                     <option key={city} value={city}>
