@@ -323,6 +323,35 @@ export const TELEGRAM_MAX_LINES = 20;
 const FIELD_MAX = 200;
 const PAYMENT_LABELS = { cashOnDelivery: 'Наличными при получении', cardDemo: 'DEMO-оплата картой (деньги не списаны)' };
 const DELIVERY_LABELS = { courier: 'Курьер по Бишкеку', pickup: 'Самовывоз', regions: 'Доставка по регионам' };
+// Названия для сообщения — те же, что regions.* и cities.* в src/locales/ru/translation.json (сверяет tests/orderCore.test.js)
+export const REGION_LABELS = {
+  bishkek: 'г. Бишкек',
+  chui: 'Чуйская область',
+  osh: 'Ошская область',
+  jalalabad: 'Джалал-Абадская область',
+  issykkul: 'Иссык-Кульская область',
+  naryn: 'Нарынская область',
+  talas: 'Таласская область',
+  batken: 'Баткенская область',
+};
+export const CITY_LABELS = {
+  bishkek: 'Бишкек',
+  tokmok: 'Токмок',
+  osh: 'Ош',
+  jalalabad: 'Джалал-Абад',
+  karakol: 'Каракол',
+  cholponata: 'Чолпон-Ата',
+  naryn: 'Нарын',
+  talas: 'Талас',
+  batken: 'Баткен',
+};
+
+/** «Иссык-Кульская область, г. Каракол»; Бишкек — один раз («г. Бишкек»); неизвестный ключ — как есть */
+export function formatRegionCity(region, city) {
+  const regionLabel = region ? REGION_LABELS[region] || region : null;
+  const cityLabel = city ? (CITY_LABELS[city] ? `г. ${CITY_LABELS[city]}` : city) : null;
+  return [regionLabel, cityLabel !== regionLabel ? cityLabel : null].filter(Boolean).join(', ');
+}
 
 export const escapeHtml = (value) =>
   String(value ?? '')
@@ -365,7 +394,7 @@ export function formatOrderMessage(order) {
       `<b>Доставка:</b> ${field(DELIVERY_LABELS[s.method] || s.method)}, ${order.delivery}`,
       `<b>Итого:</b> ${order.total}`,
       `<b>Оплата:</b> ${field(PAYMENT_LABELS[order.payment] || order.payment)} — ожидает оплаты`,
-      s.address ? `<b>Адрес:</b> ${field([s.region, s.city, s.address].filter(Boolean).join(', '), 400)}` : null,
+      s.address ? `<b>Адрес:</b> ${field([formatRegionCity(s.region, s.city), s.address].filter(Boolean).join(', '), 400)}` : null,
       s.comment ? `<b>Комментарий:</b> ${field(s.comment, 300)}` : null,
     ]
       .filter((l) => l !== null)

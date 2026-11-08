@@ -103,7 +103,7 @@ test('сообщение в Telegram (C3.3): из серверного зака�
   const text = formatOrderMessage(order);
   assert.match(text, /Айгерим Асанова \(гость\)/);
   assert.match(text, /Rose &lt;b&gt; \(B\) 50 мл — 2 шт\. × 5000/);
-  assert.match(text, /issykkul, karakol, ул\. Токтогула, 12/);
+  assert.match(text, /Иссык-Кульская область, г\. Каракол, ул\. Токтогула, 12/);
   assert.match(text, /DEMO-оплата картой \(деньги не списаны\) — ожидает оплаты/);
   assert.doesNotMatch(text, /Оплачен|4111|cvv/i);
   assert.equal(order.paymentStatus, 'awaitingPayment');

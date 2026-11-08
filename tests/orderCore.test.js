@@ -315,3 +315,33 @@ test('ограничения API и общие модули: 16 КБ; лимит
     assert.doesNotMatch(code, /from ['"][^'"]+\.jsx['"]/, file);
   }
 });
+
+test('Telegram: регион и город — русскими названиями (те же, что в переводах), без технических ключей', async () => {
+  const { REGION_LABELS, CITY_LABELS, formatRegionCity } = await import('../api/_lib/orderCore.js');
+  const { REGIONS } = await import('../src/data/regions.js');
+  const ru = JSON.parse(read('src/locales/ru/translation.json'));
+  assert.deepEqual(REGION_LABELS, ru.regions, 'регионы совпадают с переводом');
+  assert.deepEqual(CITY_LABELS, ru.cities, 'города совпадают с переводом');
+  // Каждая пара из формы получает название, а не ключ
+  for (const [region, cities] of Object.entries(REGIONS)) {
+    for (const city of cities) assert.doesNotMatch(formatRegionCity(region, city), /[a-z]/, `${region}/${city}`);
+  }
+  assert.equal(formatRegionCity('issykkul', 'karakol'), 'Иссык-Кульская область, г. Каракол');
+  assert.equal(formatRegionCity('bishkek', 'bishkek'), 'г. Бишкек');
+  assert.equal(formatRegionCity('chui', 'tokmok'), 'Чуйская область, г. Токмок');
+  assert.equal(formatRegionCity('unknown', 'x'), 'unknown, x', 'неизвестный ключ — как есть, ничего не теряется');
+  assert.equal(formatRegionCity(null, null), '');
+
+  const order = buildServerOrder({
+    orderId: 'AD-261108-ABCDEFGH',
+    now: new Date('2026-11-08T10:00:00Z'),
+    uid: null,
+    request: { customer: { name: 'Айгерим', lastName: 'Т', phone: '+996700123456', email: 'a@a.kg' }, shipping: { method: 'regions', region: 'issykkul', city: 'karakol', address: 'ул. Тестовая, 1', comment: '' }, paymentMethod: 'cashOnDelivery' },
+    priced: { lines: [{ productId: 'p', name: 'Т', brand: 'Б', volume: 30, price: 1000, quantity: 1, lineTotal: 1000 }], totals: { subtotal: 1000, discount: 0, delivery: 450, grandTotal: 1450 }, promo: null },
+  });
+  const text = formatOrderMessage(order);
+  assert.match(text, /<b>Адрес:<\/b> Иссык-Кульская область, г\. Каракол, ул\. Тестовая, 1/);
+  assert.doesNotMatch(text, /issykkul|karakol/);
+  // В сохранённом заказе ключи не меняются — только текст сообщения
+  assert.deepEqual([order.shipping.region, order.shipping.city], ['issykkul', 'karakol']);
+});
