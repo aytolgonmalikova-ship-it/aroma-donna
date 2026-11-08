@@ -10,7 +10,7 @@
  * Читать свои заказы может только их владелец — это проверяют правила firestore.rules.
  * Оплата не проводится: способы оплаты — только при получении. Деньги не списываются.
  */
-import { getFirebase } from './firebase';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { AUTH_MODE } from './authService';
 import { getGuestAppCheckToken } from './appCheck';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from '../utils/storage';
@@ -48,24 +48,15 @@ export function getGuestSessionId() {
   }
 }
 
-async function postOrder(body, headers) {
-  let res;
-  try {
-    res = await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
-  } catch {
-    throw new OrderSubmitError('network');
+async function postOrder(body, headers) { try { const db = getFirestore(); const docRef = await addDoc(collection(db, 'orders'), { ...body, createdAt: serverTimestamp(), status: 'pending' });
+return {
+  ok: true,
+  order: {
+    id: docRef.id,
+    ...body
   }
-  const data = await res.json().catch(() => null);
-  if (res.ok && data?.ok && data.order) return data;
-  const { ok: _ok, error, ...details } = data || {};
-  // Диагностика: статус и код ответа сервера (без тела запроса и токенов)
-  console.warn('[order] /api/order:', res.status, typeof error === 'string' ? error : 'no-code');
-  throw new OrderSubmitError(typeof error === 'string' ? error : res.status >= 500 ? 'network' : 'invalid_request', {
-    status: res.status,
-    details,
-    retryAfter: Number(res.headers.get('Retry-After')) || details.retryAfter || null,
-  });
-}
+};
+} catch (err) { console.error('Ошибка сохранения заказа в Firestore:', err); throw new OrderSubmitError('network', { details: err.message }); } }
 
 /**
  * Отправить заказ на сервер. request — тело без requestId (utils/orderRequest.js),
