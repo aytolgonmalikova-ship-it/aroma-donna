@@ -29,18 +29,13 @@ export class AppCheckUnavailableError extends Error {
 let appCheckPromise = null;
 
 async function getAppCheckInstance() {
-  if (import.meta.env.DEV) {
-    return null;
-  }
   const siteKey = env.VITE_RECAPTCHA_SITE_KEY;
   if (!siteKey) throw new AppCheckUnavailableError('no-site-key');
   if (!appCheckPromise) {
-    appCheckPromise = Promise.all([getFirebase(), import('firebase/app-check')]).then(([{ app }, api]) =>
-      api.initializeAppCheck(app, { 
-        provider: new api.ReCaptchaEnterpriseProvider(siteKey), 
-        isTokenAutoRefreshEnabled: true 
-      })
-    );
+    appCheckPromise = Promise.all([getFirebase(), import('firebase/app-check')]).then(([{ app }, api]) => ({
+      api,
+      instance: api.initializeAppCheck(app, { provider: new api.ReCaptchaEnterpriseProvider(siteKey), isTokenAutoRefreshEnabled: false }),
+    }));
     appCheckPromise.catch(() => {
       appCheckPromise = null;
     });
@@ -51,7 +46,6 @@ async function getAppCheckInstance() {
 /** Одноразовый токен App Check для одного запроса гостевого заказа. Бросает AppCheckUnavailableError. */
 export async function getGuestAppCheckToken() {
   try {
-    if (import.meta.env.DEV) return '';
     if (isEmulatorMode) {
       const res = await fetch('/api/_test/app-check-token', { cache: 'no-store' });
       const body = await res.json().catch(() => ({}));
