@@ -4,8 +4,6 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import MainNavigation from './MainNavigation';
 import SearchBar from '../common/SearchBar';
-import LanguageSwitcher from '../common/LanguageSwitcher';
-import ThemeToggle from '../common/ThemeToggle';
 import Logo from './Logo';
 import Icon from '../common/Icon';
 
@@ -62,13 +60,6 @@ export default function MobileMenu({ open, onClose }) {
           <Link to="/reviews" onClick={onClose}>
             <Icon name="star" size={18} /> {t('nav.reviews')}
           </Link>
-        </div>
-        <div className="mobile-menu__settings">
-          <LanguageSwitcher compact />
-          <div className="mobile-menu__theme">
-            <span>{t('theme.label')}</span>
-            <ThemeToggle />
-          </div>
         </div>
       </aside>
     </div>,

@@ -227,19 +227,6 @@
 .mobile-menu__links a:hover {
   background: var(--blush);
 }
-.mobile-menu__settings {
-  margin-top: auto;
-  display: grid;
-  gap: 14px;
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
-}
-.mobile-menu__theme {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--text-muted);
-}
 
 @media (max-width: 1240px) {
   .header__search {
@@ -248,17 +235,24 @@
 }
 /* До 1100px меню не помещается в одну строку — переходим на мобильное меню */
 @media (max-width: 1099px) {
+  /* Мобильная шапка: логотип слева, [язык · тема · корзина · бургер] одним рядом справа */
   .header__inner {
-    grid-template-columns: auto 1fr auto;
-    grid-template-areas: 'burger logo actions';
-    column-gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'logo actions';
+    column-gap: 12px;
     height: var(--header-h);
   }
   .header__inner > .logo {
     height: auto;
+    justify-self: start;
+    max-width: 100%;
   }
-  .header__burger {
-    grid-area: burger;
+  .logo__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header__actions {
+    gap: 12px;
   }
   .header .header__burger {
     display: inline-flex;
@@ -296,7 +290,16 @@
 }
 @media (max-width: 480px) {
   .header__inner {
+    column-gap: 8px;
+  }
+  /* На узких телефонах кнопки 38px с меньшим зазором, чтобы ряд не наезжал на логотип */
+  .header__actions {
     gap: 4px;
+  }
+  .header .icon-btn {
+    min-width: 38px;
+    height: 38px;
+    padding: 0 6px;
   }
   .logo {
     gap: 6px;
@@ -306,8 +309,14 @@
     letter-spacing: 0.08em;
   }
 }
-@media (max-width: 360px) {
+/* Значок логотипа прячем раньше, чтобы название не обрезалось рядом с кнопками справа */
+@media (max-width: 420px) {
   .logo__mark {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .header .lang-switcher__btn svg {
     display: none;
   }
   .logo__text {
@@ -315,8 +324,21 @@
     letter-spacing: 0.04em;
   }
   .header .icon-btn {
-    min-width: 38px;
-    padding: 0 6px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 4px;
+  }
+}
+@media (max-width: 340px) {
+  .header__inner {
+    column-gap: 4px;
+  }
+  .header__actions {
+    gap: 0;
+  }
+  .logo__text {
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
   }
 }
 

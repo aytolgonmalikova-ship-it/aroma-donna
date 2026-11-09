@@ -56,16 +56,6 @@ export default function Header() {
           ))}
       </div>
       <div className="container header__inner">
-        <button
-          type="button"
-          className="icon-btn header__burger"
-          onClick={() => setMenuOpen(true)}
-          aria-label={t('nav.openMenu')}
-          aria-expanded={menuOpen}
-        >
-          <Icon name="menu" />
-        </button>
-
         <Logo />
         <MainNavigation />
 
@@ -73,12 +63,9 @@ export default function Header() {
           <div className="header__search">
             <SearchBar />
           </div>
-          <div className="header__desktop-only">
-            <LanguageSwitcher />
-          </div>
-          <div className="header__desktop-only">
-            <ThemeToggle />
-          </div>
+          {/* Язык и тема видны всегда — и на компьютере, и в мобильной шапке */}
+          <LanguageSwitcher />
+          <ThemeToggle />
           <NavLink to="/favorites" className="icon-btn header__icon-link header__desktop-only" aria-label={`${t('nav.favorites')}: ${favoritesCount}`}>
             <Icon name="heart" />
             {favoritesCount > 0 && <span className="badge">{favoritesCount}</span>}
@@ -96,6 +83,16 @@ export default function Header() {
             <Icon name="cart" />
             {cartCount > 0 && <span className="badge" key={cartCount}>{cartCount}</span>}
           </Link>
+          {/* Бургер — последним, в правом углу (меню выезжает справа) */}
+          <button
+            type="button"
+            className="icon-btn header__burger"
+            onClick={() => setMenuOpen(true)}
+            aria-label={t('nav.openMenu')}
+            aria-expanded={menuOpen}
+          >
+            <Icon name="menu" />
+          </button>
         </div>
       </div>
       <MobileMenu open={menuOpen} onClose={closeMenu} />
